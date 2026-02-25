@@ -16,6 +16,7 @@ import {
   FileText,
   Snowflake,
   Cloud,
+  Info,
   Layers,
   LocateFixed,
   Calendar,
