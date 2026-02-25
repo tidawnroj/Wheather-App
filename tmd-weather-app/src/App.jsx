@@ -39,15 +39,13 @@ import {
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
-import markerIcon2x from 'leaflet-defaulticon-compatibility/dist/images/marker-icon-2x.png'
-import markerIcon from 'leaflet-defaulticon-compatibility/dist/images/marker-icon.png'
-import markerShadow from 'leaflet-defaulticon-compatibility/dist/images/marker-shadow.png'
 
+// Fix Leaflet default marker icons for Vite bundler
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconUrl: markerIcon,
-  iconRetinaUrl: markerIcon2x,
-  shadowUrl: markerShadow,
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
 import { findNearestStation, STATION_COORDINATES } from './utils/geo'
