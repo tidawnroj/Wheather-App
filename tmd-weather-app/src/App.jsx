@@ -21,6 +21,7 @@ import {
   Calendar,
   History,
   LayoutGrid,
+  AlertTriangle,
   BarChart3,
   X,
   Download,
@@ -32,10 +33,43 @@ import {
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend
 } from 'recharts'
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet'
+import 'leaflet/dist/leaflet.css'
+import L from 'leaflet'
+import markerIcon2x from 'leaflet-defaulticon-compatibility/dist/images/marker-icon-2x.png'
+import markerIcon from 'leaflet-defaulticon-compatibility/dist/images/marker-icon.png'
+import markerShadow from 'leaflet-defaulticon-compatibility/dist/images/marker-shadow.png'
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
+});
+
 import { findNearestStation, STATION_COORDINATES } from './utils/geo'
 import './index.css'
 
 const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJXklPJR4YW55WZxQnfoPqjWK6dpXwWA4sBmAHVeGHXStzjk0UCdZNs002Vow_9T_-xn4P02-JFl8T/pub?gid=130093209&single=true&output=csv'
+
+function MapClickHandler({ setLocation }) {
+  useMapEvents({
+    click(e) {
+      setLocation({ lat: e.latlng.lat, lon: e.latlng.lng })
+    }
+  })
+  return null
+}
+
+function MapRelocator({ center }) {
+  const map = useMap()
+  useEffect(() => {
+    if (center && center[0] && center[1]) {
+      map.flyTo(center, map.getZoom())
+    }
+  }, [center, map])
+  return null
+}
 
 function App() {
   const [data, setData] = useState([])
@@ -57,6 +91,9 @@ function App() {
   const [liveWeather, setLiveWeather] = useState(null)
   const [liveDaily, setLiveDaily] = useState(null)
   const [liveHourly, setLiveHourly] = useState(null)
+  const [liveAirQuality, setLiveAirQuality] = useState(null)
+  const [weatherAlerts, setWeatherAlerts] = useState([])
+  const [radarTime, setRadarTime] = useState(null)
   const [showAdvancedWeatherModal, setShowAdvancedWeatherModal] = useState(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [liveLocationName, setLiveLocationName] = useState({ city: 'Locating...', country: '' })
@@ -86,9 +123,22 @@ function App() {
     return Object.values(dateMap).sort((a, b) => a.date.localeCompare(b.date));
   }, [compareList, compareMetrics, data]);
 
+  const fetchRadarTime = async () => {
+    try {
+      const res = await fetch('https://api.rainviewer.com/public/weather-maps.json')
+      const data = await res.json()
+      if (data && data.radar && data.radar.past && data.radar.past.length > 0) {
+        setRadarTime(data.radar.past[data.radar.past.length - 1].time)
+      }
+    } catch (e) {
+      console.error("Radar err", e)
+    }
+  }
+
   useEffect(() => {
     fetchData()
     detectLocation()
+    fetchRadarTime()
   }, [])
 
   useEffect(() => {
@@ -144,11 +194,25 @@ function App() {
   const fetchLiveWeather = async (lat, lon) => {
     try {
       // 1. Fetch Live Weather Data from Open-Meteo with Hourly and Expanded Daily metrics
-      const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&hourly=temperature_2m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,uv_index_max,precipitation_probability_max&timezone=auto`)
+      const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,cloud_cover,visibility,surface_pressure,shortwave_radiation&hourly=temperature_2m,relative_humidity_2m,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,uv_index_max,precipitation_probability_max&timezone=auto`)
       const weatherData = await weatherRes.json()
       setLiveWeather(weatherData.current)
       setLiveDaily(weatherData.daily)
       setLiveHourly(weatherData.hourly)
+
+      // 1.5 Fetch AQI from Open-Meteo Air Quality API
+      const aqRes = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=pm10,pm2_5,us_aqi&timezone=auto`)
+      const aqData = await aqRes.json()
+      setLiveAirQuality(aqData.current)
+
+      // 1.6 Generate Alerts
+      const alerts = []
+      if (weatherData.current?.temperature_2m > 36) alerts.push("⚠️ Extreme Heat Warning (> 36°C)")
+      if (weatherData.current?.wind_gusts_10m > 40) alerts.push("⚠️ High Wind Gusts Warning")
+      if (weatherData.current?.precipitation > 10) alerts.push("🌧️ Heavy Rainfall Alert")
+      if (aqData.current?.pm2_5 > 50) alerts.push("😷 Unhealthy Air Quality (PM2.5)")
+      if (weatherData.daily?.uv_index_max?.[0] >= 8) alerts.push("☀️ Extreme UV Levels - Protect Skin")
+      setWeatherAlerts(alerts)
 
       // 2. Reverse Geocoding to get City/Country Name via Nominatim (OpenStreetMap)
       const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`)
@@ -344,6 +408,18 @@ function App() {
                   <h1 className="text-6xl lg:text-[5.5rem] font-black leading-[0.9] tracking-tight text-blue-500 mb-8">
                     {liveLocationName.country}
                   </h1>
+
+                  {/* Alert Banner */}
+                  {weatherAlerts.length > 0 && (
+                    <div className="mb-8 flex flex-col gap-3">
+                      {weatherAlerts.map((alert, i) => (
+                        <div key={i} className="w-full bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 rounded-2xl p-4 flex items-center gap-3 animate-fade-in shadow-sm">
+                          <AlertTriangle className="w-5 h-5 shrink-0" />
+                          <span className="font-bold">{alert}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   <div className="flex items-end gap-4 lg:gap-6 mb-8">
                     <div className="text-7xl lg:text-[7rem] font-black tracking-tighter leading-[0.8]">
@@ -856,14 +932,41 @@ function App() {
             </div>
             <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar flex-grow space-y-8">
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-6">
-                  <h4 className="text-sm font-bold text-slate-400 mb-2">Max UV Index (Today)</h4>
-                  <p className="text-4xl font-black font-mono">{liveDaily.uv_index_max[0]}</p>
+                  <h4 className="text-sm font-bold text-slate-400 mb-2">AQI (US)</h4>
+                  <p className={`text-4xl font-black font-mono ${liveAirQuality?.us_aqi > 100 ? 'text-red-500' : liveAirQuality?.us_aqi > 50 ? 'text-orange-500' : 'text-green-500'}`}>{liveAirQuality?.us_aqi || '--'}</p>
                 </div>
                 <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-6">
-                  <h4 className="text-sm font-bold text-slate-400 mb-2">Precipitation Probability</h4>
-                  <p className="text-4xl font-black font-mono text-blue-500">{liveDaily.precipitation_probability_max[0]}%</p>
+                  <h4 className="text-sm font-bold text-slate-400 mb-2">PM2.5</h4>
+                  <p className={`text-4xl font-black font-mono ${liveAirQuality?.pm2_5 > 50 ? 'text-red-500' : liveAirQuality?.pm2_5 > 25 ? 'text-orange-500' : 'text-slate-800 dark:text-white'}`}>{liveAirQuality?.pm2_5 || '--'} <span className="text-lg">µg/m³</span></p>
+                </div>
+                <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-6">
+                  <h4 className="text-sm font-bold text-slate-400 mb-2">Solar Radiation</h4>
+                  <p className="text-4xl font-black font-mono text-orange-500">{liveWeather?.shortwave_radiation || 0} <span className="text-lg">W/m²</span></p>
+                </div>
+                <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-6">
+                  <h4 className="text-sm font-bold text-slate-400 mb-2">Rain Prob.</h4>
+                  <p className="text-4xl font-black font-mono text-blue-500">{liveDaily?.precipitation_probability_max?.[0] || '--'}%</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-6">
+                  <h4 className="text-sm font-bold text-slate-400 mb-2">Wind Gusts</h4>
+                  <p className="text-2xl font-black font-mono">{liveWeather?.wind_gusts_10m || '--'} <span className="text-sm">km/h</span></p>
+                </div>
+                <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-6">
+                  <h4 className="text-sm font-bold text-slate-400 mb-2">Cloud Cover</h4>
+                  <p className="text-2xl font-black font-mono">{liveWeather?.cloud_cover || '--'}%</p>
+                </div>
+                <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-6">
+                  <h4 className="text-sm font-bold text-slate-400 mb-2">Visibility</h4>
+                  <p className="text-2xl font-black font-mono">{((liveWeather?.visibility || 0) / 1000).toFixed(1)} <span className="text-sm">km</span></p>
+                </div>
+                <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-6">
+                  <h4 className="text-sm font-bold text-slate-400 mb-2">Pressure</h4>
+                  <p className="text-2xl font-black font-mono">{liveWeather?.surface_pressure || '--'} <span className="text-sm">hPa</span></p>
                 </div>
               </div>
 
