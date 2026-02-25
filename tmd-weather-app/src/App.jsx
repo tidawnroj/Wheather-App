@@ -238,19 +238,36 @@ function App() {
   const fetchWeatherNews = async () => {
     try {
       setNewsLoading(true)
-      const res = await fetch('https://api.reliefweb.int/v1/reports?appname=tmd-weather-pro&query[value]=thailand+weather+OR+flood+OR+storm+OR+disaster&preset=latest&limit=12&fields[include][]=title&fields[include][]=url&fields[include][]=source&fields[include][]=date&fields[include][]=body-html')
-      const data = await res.json()
-      if (data && data.data) {
-        setNewsFeed(data.data.map(item => ({
+      const res = await fetch('https://api.reliefweb.int/v1/reports?appname=tmd-weather-pro&profile=list&preset=latest&limit=12', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filter: {
+            operator: 'OR',
+            conditions: [
+              { field: 'country.name', value: 'Thailand' },
+              { field: 'theme.name', value: 'Climate Change and Environment' },
+            ]
+          },
+          query: { value: 'weather OR flood OR storm OR disaster OR climate' },
+          fields: { include: ['title', 'url', 'source', 'date'] },
+          sort: ['date.created:desc']
+        })
+      })
+      if (!res.ok) throw new Error(`API ${res.status}`)
+      const json = await res.json()
+      if (json && json.data) {
+        setNewsFeed(json.data.map(item => ({
           id: item.id,
           title: item.fields?.title || 'Untitled Report',
-          url: item.fields?.url || '#',
+          url: item.fields?.url || `https://reliefweb.int/node/${item.id}`,
           source: item.fields?.source?.[0]?.name || 'ReliefWeb',
           date: item.fields?.date?.created ? new Date(item.fields.date.created).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent',
         })))
       }
     } catch (e) {
       console.error('News fetch err:', e)
+      setNewsFeed([])
     } finally {
       setNewsLoading(false)
     }
