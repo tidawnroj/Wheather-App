@@ -241,16 +241,26 @@ function App() {
       const articles = []
 
       // Helper: parse RSS XML into article objects
-      const parseRSS = (xmlText, sourceName, limit = 6) => {
+      // Helper: parse RSS XML into article objects
+      const parseRSS = (xmlText, sourceName, limit = 6, filterRegex = null) => {
         const parser = new DOMParser()
         const xml = parser.parseFromString(xmlText, 'text/xml')
-        const items = xml.querySelectorAll('item')
+        const items = Array.from(xml.querySelectorAll('item'))
         const result = []
-        items.forEach((item, i) => {
-          if (i >= limit) return
+
+        for (let i = 0; i < items.length; i++) {
+          if (result.length >= limit) break
+
+          const item = items[i]
           const title = item.querySelector('title')?.textContent || 'Untitled'
+          const desc = item.querySelector('description')?.textContent || ''
           const link = item.querySelector('link')?.textContent || '#'
           const pubDate = item.querySelector('pubDate')?.textContent
+
+          if (filterRegex && !filterRegex.test(title) && !filterRegex.test(desc)) {
+            continue
+          }
+
           result.push({
             id: `${sourceName}-${i}`,
             title: title.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&mdash;/g, '—').replace(/&ldquo;|&rdquo;/g, '"'),
@@ -259,16 +269,19 @@ function App() {
             date: pubDate ? new Date(pubDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent',
             timestamp: pubDate ? new Date(pubDate).getTime() : 0,
           })
-        })
+        }
         return result
       }
 
+      // Regex for weather and disaster related keywords
+      const weatherRegex = /weather|storm|rain|flood|typhoon|monsoon|drought|heatwave|temperature|climate|disaster|earthquake|tsunami|warning|alert|smog|pm2\.5|pollution/i;
+
       // Fetch all sources in parallel, each with independent error handling
       const results = await Promise.allSettled([
-        // 1. Bangkok Post RSS (Thai news)
+        // 1. Bangkok Post RSS (Thai news) - Filtered for weather/disaster
         fetch(proxy + encodeURIComponent('https://www.bangkokpost.com/rss/data/most-recent.xml'))
           .then(r => { if (!r.ok) throw new Error(r.status); return r.text() })
-          .then(text => parseRSS(text, 'Bangkok Post', 6)),
+          .then(text => parseRSS(text, 'Bangkok Post', 6, weatherRegex)),
 
         // 2. GDACS (Global Disaster Alert and Coordination System)
         fetch(proxy + encodeURIComponent('https://www.gdacs.org/xml/rss_7d.xml'))
@@ -1026,9 +1039,9 @@ function App() {
                         </div>
                         <div className="mt-auto flex items-center justify-between text-xs font-bold text-slate-400">
                           <span className={`px-3 py-1 rounded-lg ${article.source === 'Bangkok Post' ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400' :
-                              article.source === 'GDACS' ? 'bg-red-100 dark:bg-red-500/20 text-red-500' :
-                                article.source === 'TMD Earthquake' ? 'bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400' :
-                                  'bg-slate-100 dark:bg-white/5 text-slate-500'
+                            article.source === 'GDACS' ? 'bg-red-100 dark:bg-red-500/20 text-red-500' :
+                              article.source === 'TMD Earthquake' ? 'bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400' :
+                                'bg-slate-100 dark:bg-white/5 text-slate-500'
                             }`}>{article.source}</span>
                           <span>{article.date}</span>
                         </div>
