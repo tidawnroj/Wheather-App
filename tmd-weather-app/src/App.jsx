@@ -56,7 +56,9 @@ function App() {
   const [nearestStation, setNearestStation] = useState(null)
   const [liveWeather, setLiveWeather] = useState(null)
   const [liveDaily, setLiveDaily] = useState(null)
-  const [showDetailedLive, setShowDetailedLive] = useState(false)
+  const [liveHourly, setLiveHourly] = useState(null)
+  const [showAdvancedWeatherModal, setShowAdvancedWeatherModal] = useState(false)
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [liveLocationName, setLiveLocationName] = useState({ city: 'Locating...', country: '' })
 
   const latestDate = useMemo(() => {
@@ -141,11 +143,12 @@ function App() {
 
   const fetchLiveWeather = async (lat, lon) => {
     try {
-      // 1. Fetch Live Weather Data from Open-Meteo
-      const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`)
+      // 1. Fetch Live Weather Data from Open-Meteo with Hourly and Expanded Daily metrics
+      const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&hourly=temperature_2m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,uv_index_max,precipitation_probability_max&timezone=auto`)
       const weatherData = await weatherRes.json()
       setLiveWeather(weatherData.current)
       setLiveDaily(weatherData.daily)
+      setLiveHourly(weatherData.hourly)
 
       // 2. Reverse Geocoding to get City/Country Name via Nominatim (OpenStreetMap)
       const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`)
@@ -357,8 +360,8 @@ function App() {
                   </p>
 
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 lg:gap-10">
-                    <button onClick={() => setShowDetailedLive(!showDetailedLive)} className="bg-[#0b84ff] text-white px-8 py-4 rounded-full font-bold shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all w-full sm:w-auto text-center flex items-center justify-center gap-2">
-                      Detailed 7-Day Forecast {showDetailedLive ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                    <button onClick={() => setShowAdvancedWeatherModal(true)} className="bg-[#0b84ff] text-white px-8 py-4 rounded-full font-bold shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all w-full sm:w-auto text-center flex items-center justify-center gap-2">
+                      Advanced Hourly Insights
                     </button>
                     <div className="pl-2 border-l-2 border-slate-200 dark:border-white/10 hidden sm:block">
                       <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">DATA SOURCE</div>
@@ -368,8 +371,8 @@ function App() {
                     </div>
                   </div>
 
-                  {/* Detailed 7-Day Forecast Module */}
-                  {showDetailedLive && liveDaily && (
+                  {/* Permanent 7-Day Forecast Module */}
+                  {liveDaily && (
                     <div className="mt-10 animate-fade-in bg-white dark:bg-[#141414] rounded-3xl p-6 shadow-xl border border-transparent dark:border-white/5">
                       <h4 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-6">7-Day Local Forecast</h4>
                       <div className="flex overflow-x-auto gap-4 pb-4 snap-x">
@@ -825,17 +828,122 @@ function App() {
           </div>
         </footer>
         {/* Floating Feedback Button */}
-        <a
-          href="mailto:tidawnroj@gmail.com?subject=TMD%20Weather%20Pro%20Feedback"
-          className="fixed bottom-6 right-6 z-50 bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-[0_10px_30px_rgba(11,132,255,0.4)] transition-transform hover:scale-110 flex items-center gap-3 animate-fade-in group"
+        <button
+          onClick={() => setShowFeedbackModal(true)}
+          className="fixed bottom-6 right-6 z-40 bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-[0_10px_30px_rgba(11,132,255,0.4)] transition-transform hover:scale-110 flex items-center gap-3 animate-fade-in group border-none cursor-pointer"
         >
           <Mail className="w-6 h-6" />
           <span className="hidden bg-white/20 text-white rounded-xl py-1 md:group-hover:block transition-all font-bold pr-2 pl-2 text-sm overflow-hidden whitespace-nowrap">
             Send Feedback
           </span>
-        </a>
+        </button>
 
       </div>
+
+      {/* =========================================
+          MODALS
+          ========================================= */}
+
+      {/* Advanced Weather Insights Modal */}
+      {showAdvancedWeatherModal && liveHourly && liveDaily && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in text-slate-900 dark:text-white">
+          <div className="bg-white dark:bg-[#1c1c1e] w-full max-w-4xl max-h-[90vh] rounded-[32px] overflow-hidden flex flex-col shadow-2xl relative border border-white/10">
+            <div className="p-6 md:p-8 flex justify-between items-center border-b border-black/5 dark:border-white/5">
+              <h2 className="text-2xl font-black">Advanced Weather Insights</h2>
+              <button onClick={() => setShowAdvancedWeatherModal(false)} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar flex-grow space-y-8">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-6">
+                  <h4 className="text-sm font-bold text-slate-400 mb-2">Max UV Index (Today)</h4>
+                  <p className="text-4xl font-black font-mono">{liveDaily.uv_index_max[0]}</p>
+                </div>
+                <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-6">
+                  <h4 className="text-sm font-bold text-slate-400 mb-2">Precipitation Probability</h4>
+                  <p className="text-4xl font-black font-mono text-blue-500">{liveDaily.precipitation_probability_max[0]}%</p>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-bold mb-4">Hourly Temperature (Next 24 Hrs)</h3>
+                <div className="h-[300px] w-full border border-black/5 dark:border-white/5 rounded-2xl p-4 bg-white dark:bg-[#141414]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={liveHourly.time.slice(0, 24).map((t, i) => ({
+                      time: new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                      temp: liveHourly.temperature_2m[i]
+                    }))}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#333' : '#eee'} vertical={false} />
+                      <XAxis dataKey="time" tick={{ fill: isDarkMode ? '#888' : '#666', fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: isDarkMode ? '#888' : '#666', fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', backgroundColor: isDarkMode ? '#1c1c1e' : '#fff', color: isDarkMode ? '#fff' : '#000' }} />
+                      <Line type="monotone" dataKey="temp" name="Temp °C" stroke="#0b84ff" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Feedback Form Modal */}
+      {showFeedbackModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in text-slate-900 dark:text-white">
+          <div className="bg-white dark:bg-[#1c1c1e] w-full max-w-2xl rounded-[32px] overflow-hidden flex flex-col shadow-2xl relative border border-white/10">
+            <div className="p-6 md:p-8 flex justify-between items-center border-b border-black/5 dark:border-white/5">
+              <h2 className="text-2xl font-black">Send Feedback</h2>
+              <button onClick={() => setShowFeedbackModal(false)} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* FormSubmit Logic */}
+            <form action="https://formsubmit.co/tidawnroj@gmail.com" method="POST" className="p-6 md:p-8 flex-grow space-y-5 overflow-y-auto max-h-[80vh] custom-scrollbar">
+
+              {/* Important: Disable Captcha and Set Next parameters (Optional) */}
+              <input type="hidden" name="_captcha" value="false" />
+
+              {/* Dynamically generated timestamp submitted implicitly */}
+              <input type="hidden" name="Timestamp" value={new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' })} />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="firstName" className="text-sm font-bold text-slate-500">First Name <span className="text-red-500">*</span></label>
+                  <input type="text" name="First Name" id="firstName" required className="bg-slate-100 dark:bg-white/5 border-none rounded-xl p-3 focus:ring-2 focus:ring-blue-500 text-black dark:text-white" placeholder="John" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="lastName" className="text-sm font-bold text-slate-500">Last Name <span className="text-red-500">*</span></label>
+                  <input type="text" name="Last Name" id="lastName" required className="bg-slate-100 dark:bg-white/5 border-none rounded-xl p-3 focus:ring-2 focus:ring-blue-500 text-black dark:text-white" placeholder="Doe" />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="email" className="text-sm font-bold text-slate-500">Email Address <span className="text-red-500">*</span></label>
+                <input type="email" name="email" id="email" required className="bg-slate-100 dark:bg-white/5 border-none rounded-xl p-3 focus:ring-2 focus:ring-blue-500 text-black dark:text-white" placeholder="john.doe@example.com" />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="phone" className="text-sm font-bold text-slate-500">Phone Number (Optional)</label>
+                <input type="tel" name="Phone" id="phone" className="bg-slate-100 dark:bg-white/5 border-none rounded-xl p-3 focus:ring-2 focus:ring-blue-500 text-black dark:text-white" placeholder="+66 80 000 0000" />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="message" className="text-sm font-bold text-slate-500">Feedback / Message <span className="text-red-500">*</span></label>
+                <textarea name="Message" id="message" required rows="4" className="bg-slate-100 dark:bg-white/5 border-none rounded-xl p-3 focus:ring-2 focus:ring-blue-500 text-black dark:text-white resize-none" placeholder="Tell us what you think..."></textarea>
+              </div>
+
+              <button type="submit" className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold text-lg py-4 rounded-xl shadow-lg shadow-blue-500/30 transition-transform active:scale-95 mt-4">
+                Submit Feedback
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
