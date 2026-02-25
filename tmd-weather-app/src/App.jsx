@@ -24,7 +24,10 @@ import {
   BarChart3,
   X,
   Download,
-  Database
+  Database,
+  Mail,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react'
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend
@@ -52,6 +55,8 @@ function App() {
   const [userLocation, setUserLocation] = useState(null)
   const [nearestStation, setNearestStation] = useState(null)
   const [liveWeather, setLiveWeather] = useState(null)
+  const [liveDaily, setLiveDaily] = useState(null)
+  const [showDetailedLive, setShowDetailedLive] = useState(false)
   const [liveLocationName, setLiveLocationName] = useState({ city: 'Locating...', country: '' })
 
   const latestDate = useMemo(() => {
@@ -137,9 +142,10 @@ function App() {
   const fetchLiveWeather = async (lat, lon) => {
     try {
       // 1. Fetch Live Weather Data from Open-Meteo
-      const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&timezone=auto`)
+      const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`)
       const weatherData = await weatherRes.json()
       setLiveWeather(weatherData.current)
+      setLiveDaily(weatherData.daily)
 
       // 2. Reverse Geocoding to get City/Country Name via Nominatim (OpenStreetMap)
       const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`)
@@ -240,10 +246,10 @@ function App() {
       <div className="min-h-screen bg-[#f5f7fa] dark:bg-[#000000] text-slate-900 dark:text-white font-sans selection:bg-blue-500/30 overflow-x-hidden relative transition-colors duration-500 flex flex-col">
 
         {/* Ambient Left Background Blob matches the design */}
-        <div className="absolute top-0 left-0 w-[500px] lg:w-[800px] h-[600px] lg:h-[800px] bg-gradient-to-br from-blue-300/40 to-blue-500/10 dark:from-blue-600/20 dark:to-transparent rounded-full blur-[80px] lg:blur-[120px] -translate-x-1/2 -translate-y-1/4 pointer-events-none"></div>
+        <div className="absolute top-0 left-0 w-[500px] lg:w-[800px] h-[600px] lg:h-[800px] bg-gradient-to-br from-blue-300/40 to-blue-500/10 dark:from-blue-600/20 dark:to-transparent rounded-full blur-[80px] lg:blur-[120px] -translate-x-1/2 -translate-y-1/4 pointer-events-none z-0"></div>
 
         {/* Top Navbar */}
-        <nav className="sticky top-0 z-50 bg-white/80 dark:bg-[#050505]/80 backdrop-blur-xl flex items-center justify-between px-6 lg:px-10 py-4 shadow-[0_4px_30px_rgb(0,0,0,0.03)] dark:border-b dark:border-white/5 transition-colors duration-500">
+        <nav className="fixed top-0 left-0 w-full z-50 bg-white/90 dark:bg-[#050505]/90 backdrop-blur-xl flex items-center justify-between px-6 lg:px-10 py-4 border-b border-transparent dark:border-white/5 shadow-sm transition-colors duration-500">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveScreen('dashboard')}>
             <div className="w-8 h-8 lg:w-10 lg:h-10 bg-blue-500 rounded-full flex items-center justify-center text-white shrink-0 shadow-lg shadow-blue-500/30">
               <Cloud className="w-5 h-5 fill-current" />
@@ -316,7 +322,7 @@ function App() {
         </nav>
 
         {/* Main Content Area */}
-        <main className="relative z-10 w-full max-w-[1500px] mx-auto px-6 lg:px-12 pt-12 pb-24 flex-grow">
+        <main className="relative z-10 w-full max-w-[1500px] mx-auto px-6 lg:px-12 pt-[120px] pb-24 flex-grow">
 
           {/* =========================================
               SCREEN 1: LIVE DASHBOARD (API DATA) 
@@ -351,16 +357,38 @@ function App() {
                   </p>
 
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 lg:gap-10">
-                    <button onClick={() => setActiveScreen('national')} className="bg-[#0b84ff] text-white px-8 py-4 rounded-full font-bold shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all w-full sm:w-auto text-center flex items-center justify-center gap-2">
-                      View National Grid <ArrowRight className="w-4 h-4" />
+                    <button onClick={() => setShowDetailedLive(!showDetailedLive)} className="bg-[#0b84ff] text-white px-8 py-4 rounded-full font-bold shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all w-full sm:w-auto text-center flex items-center justify-center gap-2">
+                      Detailed 7-Day Forecast {showDetailedLive ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                     </button>
-                    <div className="pl-2 border-l-2 border-slate-200 dark:border-white/10">
+                    <div className="pl-2 border-l-2 border-slate-200 dark:border-white/10 hidden sm:block">
                       <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">DATA SOURCE</div>
                       <div className="flex items-center gap-1.5 text-blue-500 font-bold text-sm">
                         <MapPin className="w-4 h-4" /> Open-Meteo API
                       </div>
                     </div>
                   </div>
+
+                  {/* Detailed 7-Day Forecast Module */}
+                  {showDetailedLive && liveDaily && (
+                    <div className="mt-10 animate-fade-in bg-white dark:bg-[#141414] rounded-3xl p-6 shadow-xl border border-transparent dark:border-white/5">
+                      <h4 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-6">7-Day Local Forecast</h4>
+                      <div className="flex overflow-x-auto gap-4 pb-4 snap-x">
+                        {liveDaily.time.map((timeStr, idx) => {
+                          const dateObj = new Date(timeStr);
+                          const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+                          return (
+                            <div key={idx} className="bg-slate-50 dark:bg-white/5 rounded-2xl p-4 min-w-[100px] flex-shrink-0 flex flex-col items-center justify-center snap-center hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
+                              <span className="text-xs font-bold text-slate-500 mb-2">{idx === 0 ? 'Today' : dayName}</span>
+                              <div className="text-2xl mb-2">{[0, 1, 2].includes(liveDaily.weather_code[idx]) ? '☀️' : [3].includes(liveDaily.weather_code[idx]) ? '⛅' : '🌧️'}</div>
+                              <span className="font-black text-lg text-slate-900 dark:text-white">{Math.round(liveDaily.temperature_2m_max[idx])}°</span>
+                              <span className="text-sm font-bold text-slate-400">{Math.round(liveDaily.temperature_2m_min[idx])}°</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                 </div>
 
                 {/* Right Map Module */}
@@ -796,6 +824,17 @@ function App() {
             </div>
           </div>
         </footer>
+        {/* Floating Feedback Button */}
+        <a
+          href="mailto:tidawnroj@gmail.com?subject=TMD%20Weather%20Pro%20Feedback"
+          className="fixed bottom-6 right-6 z-50 bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-[0_10px_30px_rgba(11,132,255,0.4)] transition-transform hover:scale-110 flex items-center gap-3 animate-fade-in group"
+        >
+          <Mail className="w-6 h-6" />
+          <span className="hidden bg-white/20 text-white rounded-xl py-1 md:group-hover:block transition-all font-bold pr-2 pl-2 text-sm overflow-hidden whitespace-nowrap">
+            Send Feedback
+          </span>
+        </a>
+
       </div>
     </div>
   )
