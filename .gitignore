@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+*.csv
+raw_api_response.json
+credentials/
+.DS_Store
+
+# Local Netlify folder
+.netlify
