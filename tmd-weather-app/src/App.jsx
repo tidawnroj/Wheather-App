@@ -237,32 +237,58 @@ function App() {
   const fetchWeatherNews = async () => {
     try {
       setNewsLoading(true)
-      // Use GDACS (Global Disaster Alert and Coordination System) RSS feed
-      const proxyUrl = 'https://api.allorigins.win/raw?url='
-      const feedUrl = encodeURIComponent('https://www.gdacs.org/xml/rss_7d.xml')
-      const res = await fetch(proxyUrl + feedUrl)
-      if (!res.ok) throw new Error(`Feed ${res.status}`)
-      const text = await res.text()
-      const parser = new DOMParser()
-      const xml = parser.parseFromString(text, 'text/xml')
-      const items = xml.querySelectorAll('item')
+      const proxy = 'https://api.allorigins.win/raw?url='
       const articles = []
-      items.forEach((item, i) => {
-        if (i >= 12) return
-        const title = item.querySelector('title')?.textContent || 'Untitled Alert'
-        const link = item.querySelector('link')?.textContent || '#'
-        const pubDate = item.querySelector('pubDate')?.textContent
-        const desc = item.querySelector('description')?.textContent || ''
-        // Filter for weather-related alerts (SE Asia focus)
-        articles.push({
-          id: i,
-          title: title,
-          url: link,
-          source: 'GDACS',
-          date: pubDate ? new Date(pubDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent',
+
+      // Helper: parse RSS XML into article objects
+      const parseRSS = (xmlText, sourceName, limit = 6) => {
+        const parser = new DOMParser()
+        const xml = parser.parseFromString(xmlText, 'text/xml')
+        const items = xml.querySelectorAll('item')
+        const result = []
+        items.forEach((item, i) => {
+          if (i >= limit) return
+          const title = item.querySelector('title')?.textContent || 'Untitled'
+          const link = item.querySelector('link')?.textContent || '#'
+          const pubDate = item.querySelector('pubDate')?.textContent
+          result.push({
+            id: `${sourceName}-${i}`,
+            title: title.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&mdash;/g, '—').replace(/&ldquo;|&rdquo;/g, '"'),
+            url: link,
+            source: sourceName,
+            date: pubDate ? new Date(pubDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent',
+            timestamp: pubDate ? new Date(pubDate).getTime() : 0,
+          })
         })
+        return result
+      }
+
+      // Fetch all sources in parallel, each with independent error handling
+      const results = await Promise.allSettled([
+        // 1. Bangkok Post RSS (Thai news)
+        fetch(proxy + encodeURIComponent('https://www.bangkokpost.com/rss/data/most-recent.xml'))
+          .then(r => { if (!r.ok) throw new Error(r.status); return r.text() })
+          .then(text => parseRSS(text, 'Bangkok Post', 6)),
+
+        // 2. GDACS (Global Disaster Alert and Coordination System)
+        fetch(proxy + encodeURIComponent('https://www.gdacs.org/xml/rss_7d.xml'))
+          .then(r => { if (!r.ok) throw new Error(r.status); return r.text() })
+          .then(text => parseRSS(text, 'GDACS', 6)),
+
+        // 3. TMD Earthquake Feed
+        fetch(proxy + encodeURIComponent('https://earthquake.tmd.go.th/feed/rss-local-quake.xml'))
+          .then(r => { if (!r.ok) throw new Error(r.status); return r.text() })
+          .then(text => parseRSS(text, 'TMD Earthquake', 4)),
+      ])
+
+      // Collect all successful results
+      results.forEach(r => {
+        if (r.status === 'fulfilled' && r.value) articles.push(...r.value)
       })
-      setNewsFeed(articles)
+
+      // Sort by date (newest first), take top 12
+      articles.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+      setNewsFeed(articles.slice(0, 12))
     } catch (e) {
       console.error('News fetch err:', e)
       setNewsFeed([])
@@ -999,7 +1025,11 @@ function App() {
                           <ExternalLink className="w-4 h-4 shrink-0 text-slate-400 group-hover:text-red-500 transition-colors mt-1" />
                         </div>
                         <div className="mt-auto flex items-center justify-between text-xs font-bold text-slate-400">
-                          <span className="bg-slate-100 dark:bg-white/5 px-3 py-1 rounded-lg">{article.source}</span>
+                          <span className={`px-3 py-1 rounded-lg ${article.source === 'Bangkok Post' ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400' :
+                              article.source === 'GDACS' ? 'bg-red-100 dark:bg-red-500/20 text-red-500' :
+                                article.source === 'TMD Earthquake' ? 'bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400' :
+                                  'bg-slate-100 dark:bg-white/5 text-slate-500'
+                            }`}>{article.source}</span>
                           <span>{article.date}</span>
                         </div>
                       </a>
