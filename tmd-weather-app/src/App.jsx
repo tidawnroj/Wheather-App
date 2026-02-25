@@ -243,7 +243,7 @@ function App() {
         <div className="absolute top-0 left-0 w-[500px] lg:w-[800px] h-[600px] lg:h-[800px] bg-gradient-to-br from-blue-300/40 to-blue-500/10 dark:from-blue-600/20 dark:to-transparent rounded-full blur-[80px] lg:blur-[120px] -translate-x-1/2 -translate-y-1/4 pointer-events-none"></div>
 
         {/* Top Navbar */}
-        <nav className="relative z-50 bg-white dark:bg-[#050505] flex items-center justify-between px-6 lg:px-10 py-4 shadow-[0_4px_30px_rgb(0,0,0,0.03)] dark:border-b dark:border-white/5 transition-colors duration-500">
+        <nav className="sticky top-0 z-50 bg-white/80 dark:bg-[#050505]/80 backdrop-blur-xl flex items-center justify-between px-6 lg:px-10 py-4 shadow-[0_4px_30px_rgb(0,0,0,0.03)] dark:border-b dark:border-white/5 transition-colors duration-500">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveScreen('dashboard')}>
             <div className="w-8 h-8 lg:w-10 lg:h-10 bg-blue-500 rounded-full flex items-center justify-center text-white shrink-0 shadow-lg shadow-blue-500/30">
               <Cloud className="w-5 h-5 fill-current" />
