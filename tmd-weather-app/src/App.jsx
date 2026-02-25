@@ -237,33 +237,32 @@ function App() {
   const fetchWeatherNews = async () => {
     try {
       setNewsLoading(true)
-      const res = await fetch('https://api.reliefweb.int/v1/reports?appname=tmd-weather-pro&profile=list&preset=latest&limit=12', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          filter: {
-            operator: 'OR',
-            conditions: [
-              { field: 'country.name', value: 'Thailand' },
-              { field: 'theme.name', value: 'Climate Change and Environment' },
-            ]
-          },
-          query: { value: 'weather OR flood OR storm OR disaster OR climate' },
-          fields: { include: ['title', 'url', 'source', 'date'] },
-          sort: ['date.created:desc']
+      // Use GDACS (Global Disaster Alert and Coordination System) RSS feed
+      const proxyUrl = 'https://api.allorigins.win/raw?url='
+      const feedUrl = encodeURIComponent('https://www.gdacs.org/xml/rss_7d.xml')
+      const res = await fetch(proxyUrl + feedUrl)
+      if (!res.ok) throw new Error(`Feed ${res.status}`)
+      const text = await res.text()
+      const parser = new DOMParser()
+      const xml = parser.parseFromString(text, 'text/xml')
+      const items = xml.querySelectorAll('item')
+      const articles = []
+      items.forEach((item, i) => {
+        if (i >= 12) return
+        const title = item.querySelector('title')?.textContent || 'Untitled Alert'
+        const link = item.querySelector('link')?.textContent || '#'
+        const pubDate = item.querySelector('pubDate')?.textContent
+        const desc = item.querySelector('description')?.textContent || ''
+        // Filter for weather-related alerts (SE Asia focus)
+        articles.push({
+          id: i,
+          title: title,
+          url: link,
+          source: 'GDACS',
+          date: pubDate ? new Date(pubDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent',
         })
       })
-      if (!res.ok) throw new Error(`API ${res.status}`)
-      const json = await res.json()
-      if (json && json.data) {
-        setNewsFeed(json.data.map(item => ({
-          id: item.id,
-          title: item.fields?.title || 'Untitled Report',
-          url: item.fields?.url || `https://reliefweb.int/node/${item.id}`,
-          source: item.fields?.source?.[0]?.name || 'ReliefWeb',
-          date: item.fields?.date?.created ? new Date(item.fields.date.created).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent',
-        })))
-      }
+      setNewsFeed(articles)
     } catch (e) {
       console.error('News fetch err:', e)
       setNewsFeed([])
