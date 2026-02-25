@@ -28,7 +28,10 @@ import {
   Database,
   Mail,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Newspaper,
+  ExternalLink,
+  Bell
 } from 'lucide-react'
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend
@@ -97,6 +100,8 @@ function App() {
   const [showAdvancedWeatherModal, setShowAdvancedWeatherModal] = useState(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [liveLocationName, setLiveLocationName] = useState({ city: 'Locating...', country: '' })
+  const [newsFeed, setNewsFeed] = useState([])
+  const [newsLoading, setNewsLoading] = useState(false)
 
   const latestDate = useMemo(() => {
     if (!data || data.length === 0) return '';
@@ -139,6 +144,7 @@ function App() {
     fetchData()
     detectLocation()
     fetchRadarTime()
+    fetchWeatherNews()
   }, [])
 
   useEffect(() => {
@@ -226,6 +232,27 @@ function App() {
       }
     } catch (error) {
       console.error("Error fetching live API data:", error)
+    }
+  }
+
+  const fetchWeatherNews = async () => {
+    try {
+      setNewsLoading(true)
+      const res = await fetch('https://api.reliefweb.int/v1/reports?appname=tmd-weather-pro&query[value]=thailand+weather+OR+flood+OR+storm+OR+disaster&preset=latest&limit=12&fields[include][]=title&fields[include][]=url&fields[include][]=source&fields[include][]=date&fields[include][]=body-html')
+      const data = await res.json()
+      if (data && data.data) {
+        setNewsFeed(data.data.map(item => ({
+          id: item.id,
+          title: item.fields?.title || 'Untitled Report',
+          url: item.fields?.url || '#',
+          source: item.fields?.source?.[0]?.name || 'ReliefWeb',
+          date: item.fields?.date?.created ? new Date(item.fields.date.created).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent',
+        })))
+      }
+    } catch (e) {
+      console.error('News fetch err:', e)
+    } finally {
+      setNewsLoading(false)
     }
   }
 
@@ -333,6 +360,10 @@ function App() {
             <button className={`transition-colors ${activeScreen === 'history' ? 'text-blue-500' : 'hover:text-slate-900 dark:hover:text-white'}`} onClick={() => setActiveScreen('history')}>Historical Data</button>
             <button className={`transition-colors flex items-center gap-1.5 ${activeScreen === 'compare' ? 'text-blue-500' : 'hover:text-slate-900 dark:hover:text-white'}`} onClick={() => setActiveScreen('compare')}>
               Compare {compareList.length > 0 && <span className="bg-blue-500 text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center">{compareList.length}</span>}
+            </button>
+            <button className={`transition-colors flex items-center gap-1.5 ${activeScreen === 'alerts' ? 'text-red-500' : 'hover:text-red-500'}`} onClick={() => setActiveScreen('alerts')}>
+              <Bell className="w-4 h-4" /> Alerts
+              {weatherAlerts.length > 0 && <span className="bg-red-500 text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center animate-pulse">{weatherAlerts.length}</span>}
             </button>
           </div>
 
@@ -856,6 +887,116 @@ function App() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* =========================================
+              SCREEN 5: ALERT CENTER
+              ========================================= */}
+          {activeScreen === 'alerts' && (
+            <div className="animate-fade-in">
+              <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 mb-20">
+                {/* Left: Main Content */}
+                <div className="flex-1 flex flex-col">
+                  <span className="text-red-500 font-black uppercase tracking-[0.15em] text-xs mb-6 flex items-center gap-2">
+                    <Bell className="w-4 h-4 animate-pulse" /> ALERT CENTER
+                  </span>
+                  <h1 className="text-5xl lg:text-7xl font-black leading-[0.9] tracking-tight mb-4">
+                    Weather
+                  </h1>
+                  <h1 className="text-5xl lg:text-7xl font-black leading-[0.9] tracking-tight text-red-500 mb-8">
+                    Alerts & News
+                  </h1>
+                  <p className="text-lg text-slate-500 dark:text-slate-400 font-medium max-w-lg mb-10">
+                    Real-time weather warnings, disaster reports, and live radar tracking for Thailand and the region.
+                  </p>
+
+                  {/* Current Condition Alerts */}
+                  {weatherAlerts.length > 0 ? (
+                    <div className="flex flex-col gap-3 mb-10">
+                      <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-2">Active Warnings ({liveLocationName.city})</h3>
+                      {weatherAlerts.map((alert, i) => (
+                        <div key={i} className="w-full bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 rounded-2xl p-5 flex items-center gap-3 shadow-sm">
+                          <AlertTriangle className="w-5 h-5 shrink-0" />
+                          <span className="font-bold">{alert}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 rounded-2xl p-5 flex items-center gap-3 mb-10 shadow-sm">
+                      <Info className="w-5 h-5 shrink-0" />
+                      <span className="font-bold">All clear! No active weather warnings for {liveLocationName.city}.</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right: Live Radar Map */}
+                <div className="flex-[1.2] lg:flex-[1.4] relative rounded-[2.5rem] overflow-hidden shadow-[0_20px_60px_rgb(0,0,0,0.08)] dark:shadow-[0_20px_60px_rgb(0,0,0,0.4)] min-h-[400px] h-[500px] lg:h-auto bg-slate-200 dark:bg-slate-800 border border-black/5 dark:border-white/5">
+                  <div className="absolute top-6 left-6 z-[400] bg-white/90 dark:bg-black/80 backdrop-blur border border-black/10 dark:border-white/10 px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 pointer-events-none">
+                    <AlertTriangle className="w-5 h-5 text-red-500" />
+                    <span className="text-xs font-bold whitespace-nowrap text-slate-900 dark:text-white">Live Weather Radar<br />
+                      <span className="text-[10px] text-slate-500 font-normal">RainViewer Cloud & Precipitation</span>
+                    </span>
+                  </div>
+                  <MapContainer center={[13.75, 100.5]} zoom={6} scrollWheelZoom={true} style={{ height: '100%', width: '100%', zIndex: 1 }}>
+                    <TileLayer
+                      attribution='&copy; <a href="https://osm.org/copyright">OSM</a>'
+                      url={isDarkMode
+                        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"}
+                    />
+                    {radarTime && (
+                      <TileLayer
+                        url={`https://tilecache.rainviewer.com/v2/radar/${radarTime}/256/{z}/{x}/{y}/2/1_1.png`}
+                        opacity={0.7}
+                        zIndex={10}
+                      />
+                    )}
+                    {userLocation && (
+                      <Marker position={[userLocation.lat, userLocation.lon]}>
+                        <Popup>Your Location</Popup>
+                      </Marker>
+                    )}
+                  </MapContainer>
+                </div>
+              </div>
+
+              {/* News Feed Section */}
+              <div className="mb-16">
+                <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
+                  <Newspaper className="w-4 h-4" /> Latest Disaster & Weather Reports
+                </h3>
+                {newsLoading ? (
+                  <div className="text-center py-20 text-slate-400 font-bold animate-pulse">Loading news feed...</div>
+                ) : newsFeed.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {newsFeed.map((article) => (
+                      <a
+                        key={article.id}
+                        href={article.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="group bg-white dark:bg-[#141414] rounded-3xl p-6 shadow-md border border-transparent dark:border-white/5 hover:shadow-xl hover:scale-[1.02] transition-all flex flex-col gap-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <h4 className="font-bold text-slate-900 dark:text-white leading-snug line-clamp-3 group-hover:text-red-500 transition-colors">{article.title}</h4>
+                          <ExternalLink className="w-4 h-4 shrink-0 text-slate-400 group-hover:text-red-500 transition-colors mt-1" />
+                        </div>
+                        <div className="mt-auto flex items-center justify-between text-xs font-bold text-slate-400">
+                          <span className="bg-slate-100 dark:bg-white/5 px-3 py-1 rounded-lg">{article.source}</span>
+                          <span>{article.date}</span>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-20 bg-white dark:bg-[#141414] rounded-3xl border border-transparent dark:border-white/5 shadow-sm">
+                    <Newspaper className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-700 mb-4" />
+                    <p className="text-xl font-black text-slate-900 dark:text-white mb-2">No Reports Available</p>
+                    <p className="text-slate-500 font-medium">Could not load disaster reports at this time.</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
