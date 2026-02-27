@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Copernicus Scientific Analysis Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec80",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#102219",
+                        "emerald-glass": "rgba(19, 236, 128, 0.1)",
+                        "surface-dark": "#162e22",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .glass {
+            background: rgba(16, 34, 25, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(19, 236, 128, 0.2);
+        }
+        .terminal-text {
+            font-family: 'Courier New', Courier, monospace;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<header class="sticky top-0 z-50 glass border-b border-primary/20 px-4 py-2 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-2xl">rocket_launch</span>
+<div>
+<h1 class="text-sm font-bold tracking-tight uppercase leading-none">Copernicus Hub</h1>
+<p class="text-[10px] text-primary/70 font-medium uppercase tracking-widest">Mission Control</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden sm:flex flex-col items-end">
+<p class="text-[10px] text-primary/60 uppercase">System Time</p>
+<p class="text-xs font-mono font-bold">14:22:05 UTC</p>
+</div>
+<div class="size-8 rounded-full border border-primary/40 bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-sm">person</span>
+</div>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto pb-24">
+<div class="p-4 space-y-4">
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-primary/50 text-xl">search</span>
+<input class="w-full bg-surface-dark/50 border border-primary/20 rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary placeholder-primary/30" placeholder="Search satellites, regions..." type="text"/>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div class="glass p-3 rounded-lg flex flex-col justify-between">
+<div>
+<p class="text-[10px] text-primary/60 uppercase font-bold">CO2 Anomaly</p>
+<h3 class="text-lg font-bold">+2.4ppm</h3>
+</div>
+<div class="flex items-center gap-1 text-primary text-[10px] font-bold">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+                        1.2%
+                    </div>
+</div>
+<div class="glass p-3 rounded-lg flex flex-col justify-between">
+<div>
+<p class="text-[10px] text-primary/60 uppercase font-bold">Sea Level</p>
+<h3 class="text-lg font-bold">+3.2mm</h3>
+</div>
+<div class="flex items-center gap-1 text-rose-500 text-[10px] font-bold">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+                        0.4%
+                    </div>
+</div>
+<div class="glass p-3 rounded-lg flex flex-col justify-between">
+<div>
+<p class="text-[10px] text-primary/60 uppercase font-bold">Thermal</p>
+<h3 class="text-lg font-bold">+0.8°C</h3>
+</div>
+<div class="flex items-center gap-1 text-primary text-[10px] font-bold">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+                        2.1%
+                    </div>
+</div>
+<div class="glass p-3 rounded-lg flex flex-col justify-between">
+<div>
+<p class="text-[10px] text-primary/60 uppercase font-bold">PM2.5</p>
+<h3 class="text-lg font-bold">12μg/m³</h3>
+</div>
+<div class="flex items-center gap-1 text-primary text-[10px] font-bold">
+<span class="material-symbols-outlined text-sm">trending_down</span>
+                        5.0%
+                    </div>
+</div>
+</div>
+<div class="relative h-64 w-full rounded-xl overflow-hidden border border-primary/30 shadow-[0_0_20px_rgba(19,236,128,0.15)]">
+<div class="absolute inset-0 bg-slate-900" data-alt="Satellite imagery of Earth at night with neon data overlays" data-location="Global Heatmap" style="background-image: url('https://placeholder.pics/svg/300'); background-size: cover; background-position: center;"></div>
+<div class="absolute inset-0 bg-primary/10 mix-blend-overlay"></div>
+<div class="absolute top-3 right-3 glass p-2 rounded-lg flex flex-col gap-2">
+<button class="size-8 rounded bg-primary text-background-dark flex items-center justify-center">
+<span class="material-symbols-outlined text-lg">layers</span>
+</button>
+<button class="size-8 rounded bg-surface-dark text-primary flex items-center justify-center border border-primary/20">
+<span class="material-symbols-outlined text-lg">add</span>
+</button>
+<button class="size-8 rounded bg-surface-dark text-primary flex items-center justify-center border border-primary/20">
+<span class="material-symbols-outlined text-lg">remove</span>
+</button>
+</div>
+<div class="absolute bottom-3 left-3 glass px-3 py-1.5 rounded-full flex items-center gap-2">
+<div class="size-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_#13ec80]"></div>
+<span class="text-[10px] font-bold tracking-widest text-primary uppercase">Sentinel-2A Active</span>
+</div>
+</div>
+<div class="glass rounded-xl overflow-hidden flex flex-col h-48">
+<div class="bg-primary/10 border-b border-primary/20 px-3 py-2 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-primary">terminal</span>
+<h3 class="text-[10px] font-bold uppercase tracking-wider">Satellite Telemetry Feed</h3>
+</div>
+<div class="flex gap-1">
+<div class="size-1.5 rounded-full bg-primary/40"></div>
+<div class="size-1.5 rounded-full bg-primary/40"></div>
+</div>
+</div>
+<div class="p-3 terminal-text text-[10px] leading-relaxed overflow-y-auto space-y-1 opacity-80 text-primary/90">
+<p><span class="text-primary/50">[14:21:44]</span> SENTINEL-5P: Atmospheric profile captured.</p>
+<p><span class="text-primary/50">[14:21:52]</span> L3-DATA: Processing tropospheric NO2 column.</p>
+<p><span class="text-primary/50">[14:22:01]</span> UPLINK: Synchronizing regional subsets (Grid-E4).</p>
+<p><span class="text-primary/50">[14:22:05]</span> ALARM: Thermal anomaly detected in Sector 42.</p>
+<p><span class="text-primary/50">[14:22:08]</span> SYS: Re-routing Sentinel-2B for high-res pass.</p>
+<p><span class="text-primary/50">[14:22:12]</span> DATA: Byte stream 0xFF42-0xAF91 verified.</p>
+</div>
+</div>
+</div>
+</main>
+<nav class="fixed bottom-0 left-0 right-0 glass border-t border-primary/20 px-2 pb-6 pt-2 flex justify-around items-center z-50">
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined text-2xl fill-1">dashboard</span>
+<span class="text-[10px] font-bold uppercase tracking-tight">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary/40" href="#">
+<span class="material-symbols-outlined text-2xl">globe_uk</span>
+<span class="text-[10px] font-bold uppercase tracking-tight">ECMWF</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary/40" href="#">
+<span class="material-symbols-outlined text-2xl">air</span>
+<span class="text-[10px] font-bold uppercase tracking-tight">CAMS</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary/40" href="#">
+<span class="material-symbols-outlined text-2xl">thermostat</span>
+<span class="text-[10px] font-bold uppercase tracking-tight">C3S</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary/40" href="#">
+<span class="material-symbols-outlined text-2xl">settings</span>
+<span class="text-[10px] font-bold uppercase tracking-tight">Config</span>
+</a>
+</nav>
+</body></html>

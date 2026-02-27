@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Copernicus Open Data Hub Home</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec80",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#102219",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased overflow-x-hidden min-h-screen flex flex-col">
+<header class="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-emerald-800/20 px-4 py-3 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<button class="flex items-center justify-center p-2 rounded-lg bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors shadow-[0_0_15px_rgba(19,236,128,0.2)]">
+<span class="material-symbols-outlined text-xl">arrow_back</span>
+</button>
+<h2 class="text-lg font-bold tracking-tight">Dashboard</h2>
+</div>
+<div class="flex gap-2">
+<button class="p-2 text-slate-600 dark:text-slate-400">
+<span class="material-symbols-outlined">dashboard_customize</span>
+</button>
+</div>
+</header>
+<main class="flex-1">
+<section class="relative overflow-hidden bg-emerald-950 px-6 py-12 @container">
+<div class="absolute inset-0 opacity-20 pointer-events-none">
+<div class="absolute -top-24 -left-24 w-96 h-96 bg-primary rounded-full blur-[120px]"></div>
+<div class="absolute -bottom-24 -right-24 w-64 h-64 bg-emerald-500 rounded-full blur-[100px]"></div>
+</div>
+<div class="relative z-10 flex flex-col gap-6 max-w-xl mx-auto">
+<div class="inline-flex items-center px-3 py-1 rounded-full bg-primary/20 border border-primary/30 text-primary text-xs font-bold uppercase tracking-wider">
+                    Official EU Hub
+                </div>
+<h1 class="text-4xl @[480px]:text-5xl font-bold leading-tight tracking-tight text-white">
+                    Copernicus: <span class="text-primary">European Union</span> Open Data Hub
+                </h1>
+<p class="text-emerald-100/80 text-base leading-relaxed">
+                    Access high-resolution satellite imagery and environmental data streams for planetary monitoring and sustainable development.
+                </p>
+<div class="flex flex-wrap gap-4 mt-4">
+<button class="bg-primary hover:bg-primary/90 text-background-dark font-bold py-3 px-8 rounded-lg shadow-[0_0_20px_rgba(19,236,128,0.4)] transition-all transform active:scale-95">
+                        Explore Datasets
+                    </button>
+<button class="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/20 font-bold py-3 px-8 rounded-lg transition-all">
+                        Documentation
+                    </button>
+</div>
+</div>
+<div class="mt-12 relative w-full aspect-video rounded-xl overflow-hidden border border-emerald-800/50 shadow-2xl">
+<img alt="Earth from space digital visualization" class="w-full h-full object-cover" data-alt="Digital visualization of Earth from space with data layers" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAwyy_UpdSLdaOqrOyneeXOuhflYGlp6NMEL-EExCFe2NLg4hXI2FH7EEfc1gj-6B-o3t06XxGbnMovhifEHqPRE86jqzQTaj7eBVed5eYsb7rGXEh1ohKSjJYivWImgeZ0iz_3S4qlt2CeFtLU58Q29uYyocmqQGvCuGUPWy1ZGBQv2pyMRTF7Q_aJeD2iBLqCZ9QmvbLUysnAea5nZInN55YyVnOSd2KyFlIIDtEbO12c-s2hfdXCh-fpUWO6MywDMn_6dHOFX98"/>
+<div class="absolute inset-0 bg-gradient-to-t from-emerald-950 via-transparent to-transparent"></div>
+</div>
+</section>
+<section class="px-4 py-8">
+<h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+<span class="w-2 h-6 bg-primary rounded-full"></span>
+                Core Monitoring Services
+            </h3>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="group relative overflow-hidden rounded-xl border border-emerald-800/50 bg-emerald-900/10 backdrop-blur-xl p-1 transition-all hover:shadow-[0_0_25px_rgba(19,236,128,0.2)]">
+<div class="aspect-square w-full rounded-lg overflow-hidden relative">
+<img alt="Weather forecasting visualization" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="High-tech weather forecast visualization map" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBWcyl0Tgs-JCjs2QjTBgXUnLR7ijzB1fmMPysPTmJZrGjyCGBfCFJj36RJ0lnCuwL1q3f_9VNYLEENfVOPajWHHYirGChaU9FNKxwjZZe8NW2q5rS-UnIWRmgKQUDkFFVoC-M3x7mkPg1ed1s3uvggNmCnWeyaKR8uAF5Wk-XZHI3q7yTChjZ600F3pBJV9NAJ8SgqCheUsQlLTZjQBs4QucatzWz0v4yeWUh62yrOfRHHB-PCe6ov4Creqlrb8XI0MIIJNeXgPyM"/>
+<div class="absolute inset-0 bg-gradient-to-t from-emerald-950/80 to-transparent"></div>
+</div>
+<div class="p-4">
+<h4 class="text-white text-lg font-bold">ECMWF Forecasts</h4>
+<p class="text-slate-400 text-sm mt-1">Industry-leading global weather models and reanalysis.</p>
+<button class="mt-4 text-primary text-sm font-semibold flex items-center gap-1">
+                            Access Service <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+<div class="group relative overflow-hidden rounded-xl border border-emerald-800/50 bg-emerald-900/10 backdrop-blur-xl p-1 transition-all hover:shadow-[0_0_25px_rgba(19,236,128,0.2)]">
+<div class="aspect-square w-full rounded-lg overflow-hidden relative">
+<img alt="Atmosphere monitoring visualization" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Colorized map showing global air quality concentrations" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-C6eVhZY69gKqFm3eTbZgeyrTf6fLxJKfu7oXoXd1VLiGsKqRNQiM-JThKSMFGDE3tLX1utdmhhijD8ZWKWM-fn6TPZgDE0yRTUNNt1xwKqRoEXYWGiQ2X7vWW-ZoeiXhAdaLercoenxse4mt1N9LqoRrD-sxTedgnx4oOOtQm04HdDnzvzPv6rEB4d_TB2iZa2NP0ehyTNFaExtwp-fFg38MY2Z8iJetHEAZL44Lyd1pTZoLhOHoaTpX9vbuyryw7uA2mCW4aNU"/>
+<div class="absolute inset-0 bg-gradient-to-t from-emerald-950/80 to-transparent"></div>
+</div>
+<div class="p-4">
+<h4 class="text-white text-lg font-bold">CAMS Air Quality</h4>
+<p class="text-slate-400 text-sm mt-1">Real-time PM2.5/PM10 tracking and atmospheric composition.</p>
+<button class="mt-4 text-primary text-sm font-semibold flex items-center gap-1">
+                            Access Service <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+<div class="group relative overflow-hidden rounded-xl border border-emerald-800/50 bg-emerald-900/10 backdrop-blur-xl p-1 transition-all hover:shadow-[0_0_25px_rgba(19,236,128,0.2)]">
+<div class="aspect-square w-full rounded-lg overflow-hidden relative">
+<img alt="Climate change impact visualization" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Mountain landscape showing glacial retreat data layers" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBaLHD--s8xoAZ1TVYgQwAz1ZQ031SYaq9Os8cAEPnFQcH9k0UIQcmkChcCZ4uJNQOh2N2i9qIDiix0Z2aHSlocV4eFb9Pf8N80mVxYHRsXsgVR9l0JdUYgD6geVdvPA_ZJtnImr2LMCDJMYgefEouz0bt3HRCRqSQR1FNGuYYKysZzlSSrycv_clw4aoPlUQD2AWPiUElqIqIFjGV_OYLd6ws8LCOvXQyHStI3nv3IVNpezGzkMxKAhYXAHYjbqHONJAxmj1bvPYA"/>
+<div class="absolute inset-0 bg-gradient-to-t from-emerald-950/80 to-transparent"></div>
+</div>
+<div class="p-4">
+<h4 class="text-white text-lg font-bold">C3S Climate Hub</h4>
+<p class="text-slate-400 text-sm mt-1">Monitoring global warming trends and sea surface temperatures.</p>
+<button class="mt-4 text-primary text-sm font-semibold flex items-center gap-1">
+                            Access Service <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<section class="px-4 py-8 bg-emerald-900/20 border-y border-emerald-800/30">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-lg font-bold">Latest Global Map</h3>
+<span class="text-xs text-primary bg-primary/10 px-2 py-1 rounded">Live Data</span>
+</div>
+<div class="w-full h-48 rounded-xl overflow-hidden relative border border-emerald-800/40">
+<img alt="Topographic world map" class="w-full h-full object-cover grayscale brightness-50 contrast-125" data-alt="Abstract topographic map with emerald neon paths" data-location="Global" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAG2yl7arF6HB-zP3EgiAtaWyMeyYx6TYaIEgIPJu3nj3gY3WaDN1kemQMoM7B8NQsFPEbjaTa2eM2I5v3yJ89-ToM2v2bXpLRg9cNv-wMOtba37aCTUUIU73a0a7dKW4b6np1Tb-k5j9amSAQ2UyZN3O0mLZZCwdvncfHQGHA0gay8Gi7rUyzEwD49KouGTWXHwLnpeewkuaM3579_kikPBac9xIZSRYJmOs0MxLC3wRYvZeGHAgcTdLLNtyJQnKGQym58bRAiVxM"/>
+<div class="absolute inset-0 bg-primary/5 mix-blend-overlay"></div>
+<div class="absolute inset-0 flex items-center justify-center">
+<button class="bg-primary/20 hover:bg-primary/30 backdrop-blur-sm border border-primary/50 text-primary px-4 py-2 rounded-full font-bold text-sm">
+                        View Map Layers
+                    </button>
+</div>
+</div>
+</section>
+</main>
+<footer class="mt-auto border-t border-emerald-800/30 bg-background-dark px-4 pb-8 pt-4">
+<div class="flex gap-2 mb-6">
+<a class="flex flex-1 flex-col items-center justify-center gap-1 rounded-xl py-2 bg-primary/10 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">home</span>
+<p class="text-[10px] font-bold uppercase tracking-wider">Home</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 py-2 text-slate-500" href="#">
+<span class="material-symbols-outlined">explore</span>
+<p class="text-[10px] font-bold uppercase tracking-wider">Explore</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 py-2 text-slate-500" href="#">
+<span class="material-symbols-outlined">notifications</span>
+<p class="text-[10px] font-bold uppercase tracking-wider">Alerts</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 py-2 text-slate-500" href="#">
+<span class="material-symbols-outlined">settings</span>
+<p class="text-[10px] font-bold uppercase tracking-wider">Settings</p>
+</a>
+</div>
+<p class="text-center text-slate-600 text-[10px]">© 2024 Copernicus Programme. European Union Data Hub.</p>
+</footer>
+</body></html>

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Copernicus Scientific Data Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec80",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#08150f",
+                        "emerald-deep": "#06130d",
+                        "emerald-accent": "#10b981",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .glass {
+            background: rgba(16, 34, 25, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(19, 236, 128, 0.1);
+        }
+        .glow-emerald {
+            box-shadow: 0 0 15px rgba(19, 236, 128, 0.2);
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #13ec8055;
+            border-radius: 10px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 selection:bg-primary/30">
+<div class="relative flex h-screen w-full overflow-hidden">
+<!-- Left Sidebar (Desktop inspired, mobile adjusted) -->
+<aside class="hidden md:flex w-20 flex-col items-center py-8 border-r border-primary/10 bg-emerald-deep/80 backdrop-blur-xl">
+<div class="mb-10 text-primary">
+<span class="material-symbols-outlined text-4xl">language</span>
+</div>
+<nav class="flex flex-col gap-8 flex-1">
+<a class="p-3 rounded-xl bg-primary/20 text-primary glow-emerald" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+</a>
+<a class="p-3 rounded-xl text-emerald-accent/60 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">cloud</span>
+</a>
+<a class="p-3 rounded-xl text-emerald-accent/60 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">air</span>
+</a>
+<a class="p-3 rounded-xl text-emerald-accent/60 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">thermostat</span>
+</a>
+<a class="p-3 rounded-xl text-emerald-accent/60 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+</a>
+</nav>
+<div class="mt-auto">
+<button class="p-3 rounded-xl text-emerald-accent/60">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+</div>
+</aside>
+<!-- Main Content Wrapper -->
+<div class="flex-1 flex flex-col h-full overflow-hidden">
+<!-- Top Header -->
+<header class="flex items-center justify-between px-6 py-4 border-b border-primary/10 glass z-20">
+<div class="flex items-center gap-4 flex-1 max-w-xl">
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-primary/60 text-lg">search</span>
+<input class="w-full bg-primary/5 border-primary/10 rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-primary focus:border-primary placeholder:text-primary/30" placeholder="Search datasets..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4 ml-4">
+<button class="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/10 text-xs font-medium">
+<span class="material-symbols-outlined text-sm">calendar_today</span>
+<span>24h Range</span>
+</button>
+<div class="relative p-2 text-emerald-accent hover:text-primary cursor-pointer">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-primary rounded-full glow-emerald"></span>
+</div>
+<div class="size-10 rounded-full border border-primary/30 overflow-hidden bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">person</span>
+</div>
+</div>
+</header>
+<!-- Main Scrollable Area -->
+<main class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+<!-- KPI Top Row -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="glass p-4 rounded-xl border-l-4 border-l-primary/60">
+<div class="flex items-center justify-between mb-2">
+<span class="text-[10px] uppercase tracking-widest text-primary/60 font-bold">Global Temp</span>
+<span class="material-symbols-outlined text-primary text-lg">trending_up</span>
+</div>
+<div class="text-xl md:text-2xl font-bold text-slate-100">+1.2°C</div>
+<div class="text-xs text-primary mt-1 font-medium">+0.1% vs avg</div>
+</div>
+<div class="glass p-4 rounded-xl border-l-4 border-l-primary/60">
+<div class="flex items-center justify-between mb-2">
+<span class="text-[10px] uppercase tracking-widest text-primary/60 font-bold">Avg PM2.5</span>
+<span class="material-symbols-outlined text-primary text-lg">grain</span>
+</div>
+<div class="text-xl md:text-2xl font-bold text-slate-100">12µg/m³</div>
+<div class="text-xs text-primary mt-1 font-medium">+2% recovery</div>
+</div>
+<div class="glass p-4 rounded-xl border-l-4 border-l-emerald-accent/40">
+<div class="flex items-center justify-between mb-2">
+<span class="text-[10px] uppercase tracking-widest text-primary/60 font-bold">Cyclones</span>
+<span class="material-symbols-outlined text-amber-400 text-lg">cyclone</span>
+</div>
+<div class="text-xl md:text-2xl font-bold text-slate-100">2 Active</div>
+<div class="text-xs text-amber-400 mt-1 font-medium">Warning Active</div>
+</div>
+<div class="glass p-4 rounded-xl border-l-4 border-l-primary/60">
+<div class="flex items-center justify-between mb-2">
+<span class="text-[10px] uppercase tracking-widest text-primary/60 font-bold">Sea Level</span>
+<span class="material-symbols-outlined text-primary text-lg">water</span>
+</div>
+<div class="text-xl md:text-2xl font-bold text-slate-100">+3.4mm</div>
+<div class="text-xs text-primary mt-1 font-medium">+0.5% yearly</div>
+</div>
+</div>
+<!-- Middle Map Row -->
+<div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+<div class="xl:col-span-3 relative h-[400px] md:h-[500px] rounded-2xl overflow-hidden border border-primary/20 bg-emerald-deep">
+<div class="absolute inset-0 z-0 opacity-40">
+<img class="w-full h-full object-cover" data-alt="Satellite earth map showing dark continents and ocean glowing networks" data-location="Global" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAW08Ld9XFZQIV-Ar7iVsYwY0-Bg068EuYoSjlOsuOfIiw30A756zNCTC8DIwejiaqZXDaPMu5zLxCj-A9QQ5bATQuN7aa9bbzF1AvOWeuH7DM4aTnY-EeC4dlb8tAB68utFq2peq3prLCK8ROGsWDbqbXTis2Fdkz81wrqJys3K-xkzcRLTcZezfg6FXI9p5zKtSXacSUuRMRDfx36HEim1SU5hEtnLLW6px1t-13D5YnvT-hJHHoc9K4N7Feuf4ASLTQ_jVBl484"/>
+<!-- Overlay Heatmap Gradient -->
+<div class="absolute inset-0 bg-gradient-to-tr from-primary/10 via-transparent to-amber-500/10 mix-blend-overlay"></div>
+</div>
+<!-- Map HUD -->
+<div class="absolute top-4 left-4 z-10 flex flex-col gap-2">
+<div class="glass px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs">
+<span class="size-2 rounded-full bg-primary animate-pulse"></span>
+<span class="text-slate-100 font-medium">Live Feed: Sentinel-5P</span>
+</div>
+</div>
+<!-- Floating Layers Panel -->
+<div class="absolute top-4 right-4 z-10 w-48 glass p-4 rounded-xl">
+<h3 class="text-xs font-bold text-primary mb-3 uppercase tracking-wider">Map Layers</h3>
+<div class="space-y-3">
+<label class="flex items-center gap-3 cursor-pointer">
+<input checked="" class="rounded border-primary/20 bg-emerald-deep text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-xs text-slate-200">Thermal Anomaly</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer">
+<input class="rounded border-primary/20 bg-emerald-deep text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-xs text-slate-400">Cloud Coverage</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer">
+<input checked="" class="rounded border-primary/20 bg-emerald-deep text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-xs text-slate-200">CO2 Density</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer">
+<input class="rounded border-primary/20 bg-emerald-deep text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-xs text-slate-400">Nitrogen Dioxide</span>
+</label>
+</div>
+<div class="mt-4 pt-4 border-t border-primary/10">
+<button class="w-full py-2 bg-primary/20 text-primary text-[10px] font-bold rounded-lg uppercase">Export View</button>
+</div>
+</div>
+<!-- Map Coordinates Footer -->
+<div class="absolute bottom-4 left-4 glass px-3 py-1 rounded text-[10px] text-primary/70 font-mono">
+                            LAT: 48.8566 | LON: 2.3522 | ALT: 786KM
+                        </div>
+</div>
+<!-- Side Log Feed -->
+<div class="xl:col-span-1 flex flex-col glass rounded-2xl h-[400px] md:h-[500px]">
+<div class="p-4 border-b border-primary/10 flex items-center justify-between">
+<h3 class="text-sm font-bold text-slate-100">Live Monitoring</h3>
+<span class="material-symbols-outlined text-primary text-sm">reorder</span>
+</div>
+<div class="flex-1 overflow-y-auto p-4 space-y-4">
+<div class="flex gap-3">
+<div class="shrink-0 size-1.5 rounded-full bg-primary mt-1.5"></div>
+<div class="flex flex-col gap-1">
+<p class="text-[11px] text-slate-300"><span class="text-primary font-bold">CAMS:</span> New data packet from Sentinel-5P received.</p>
+<span class="text-[9px] text-primary/40">12:45:02 UTC</span>
+</div>
+</div>
+<div class="flex gap-3">
+<div class="shrink-0 size-1.5 rounded-full bg-primary mt-1.5"></div>
+<div class="flex flex-col gap-1">
+<p class="text-[11px] text-slate-300"><span class="text-primary font-bold">ECMWF:</span> Processing global forecast run HRES v4.2.</p>
+<span class="text-[9px] text-primary/40">12:44:15 UTC</span>
+</div>
+</div>
+<div class="flex gap-3">
+<div class="shrink-0 size-1.5 rounded-full bg-amber-400 mt-1.5"></div>
+<div class="flex flex-col gap-1">
+<p class="text-[11px] text-slate-300"><span class="text-amber-400 font-bold">SYSTEM:</span> Calibration required for Sea Level Sensor S3-A.</p>
+<span class="text-[9px] text-primary/40">12:30:44 UTC</span>
+</div>
+</div>
+<div class="flex gap-3">
+<div class="shrink-0 size-1.5 rounded-full bg-primary mt-1.5"></div>
+<div class="flex flex-col gap-1">
+<p class="text-[11px] text-slate-300"><span class="text-primary font-bold">C3S:</span> Monthly climate summary generated for Region 08.</p>
+<span class="text-[9px] text-primary/40">11:58:22 UTC</span>
+</div>
+</div>
+<div class="flex gap-3">
+<div class="shrink-0 size-1.5 rounded-full bg-primary mt-1.5"></div>
+<div class="flex flex-col gap-1">
+<p class="text-[11px] text-slate-300"><span class="text-primary font-bold">CAMS:</span> Global Aerosols ingestion complete.</p>
+<span class="text-[9px] text-primary/40">11:45:10 UTC</span>
+</div>
+</div>
+</div>
+<div class="p-3 border-t border-primary/10">
+<button class="w-full text-center text-[11px] text-primary/60 hover:text-primary py-1">View historical logs</button>
+</div>
+</div>
+</div>
+<!-- Padding for bottom nav -->
+<div class="h-20 md:hidden"></div>
+</main>
+<!-- Bottom Navigation (Mobile Only) -->
+<div class="fixed bottom-0 left-0 right-0 md:hidden z-30">
+<div class="flex gap-1 border-t border-primary/10 bg-emerald-deep/95 backdrop-blur-lg px-4 pb-6 pt-3 justify-around items-center">
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">dashboard</span>
+<p class="text-[10px] font-medium tracking-tight">Dashboard</p>
+</a>
+<a class="flex flex-col items-center gap-1 text-emerald-accent/50" href="#">
+<span class="material-symbols-outlined">cloud</span>
+<p class="text-[10px] font-medium tracking-tight">ECMWF</p>
+</a>
+<a class="flex flex-col items-center gap-1 text-emerald-accent/50" href="#">
+<span class="material-symbols-outlined">air</span>
+<p class="text-[10px] font-medium tracking-tight">CAMS</p>
+</a>
+<a class="flex flex-col items-center gap-1 text-emerald-accent/50" href="#">
+<span class="material-symbols-outlined">thermostat</span>
+<p class="text-[10px] font-medium tracking-tight">C3S</p>
+</a>
+<a class="flex flex-col items-center gap-1 text-emerald-accent/50" href="#">
+<span class="material-symbols-outlined">settings</span>
+<p class="text-[10px] font-medium tracking-tight">Settings</p>
+</a>
+</div>
+</div>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#13ec80",
+              "background-light": "#f6f8f7",
+              "background-dark": "#102219",
+            },
+            fontFamily: {
+              "display": ["Space Grotesk"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      body {
+        font-family: 'Space Grotesk', sans-serif;
+      }
+      .glass-card {
+        background: rgba(19, 236, 128, 0.05);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(19, 236, 128, 0.1);
+      }
+      .glow-shadow {
+        box-shadow: 0 0 40px -5px rgba(19, 236, 128, 0.3);
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen flex flex-col items-center justify-between p-8 overflow-hidden">
+<!-- Top Status Bar Simulation -->
+<div class="w-full flex justify-between items-center text-slate-900 dark:text-slate-100/50 pt-2 px-2">
+<span class="text-sm font-medium">9:41</span>
+<div class="flex gap-1.5 items-center">
+<span class="material-symbols-outlined text-sm">signal_cellular_4_bar</span>
+<span class="material-symbols-outlined text-sm">wifi</span>
+<span class="material-symbols-outlined text-sm">battery_full</span>
+</div>
+</div>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col items-center justify-center w-full max-w-sm">
+<!-- Animated Central Icon Area -->
+<div class="relative group">
+<!-- Decorative concentric circles for "pulsing" effect -->
+<div class="absolute inset-0 rounded-full bg-primary/20 blur-3xl scale-150 opacity-30"></div>
+<div class="absolute inset-0 rounded-full border border-primary/20 scale-125"></div>
+<div class="absolute inset-0 rounded-full border border-primary/10 scale-150"></div>
+<div class="relative w-48 h-48 bg-background-dark/40 rounded-full flex items-center justify-center border border-primary/30 glow-shadow">
+<span class="material-symbols-outlined text-primary text-[100px] leading-none" style="font-variation-settings: 'FILL' 1, 'wght' 200;">
+                    public
+                </span>
+</div>
+</div>
+<!-- Text Elements -->
+<div class="mt-16 text-center">
+<h1 class="text-slate-900 dark:text-slate-100 text-2xl font-bold tracking-tight mb-2">
+                Connecting to Copernicus Network...
+            </h1>
+<p class="text-slate-600 dark:text-primary/70 text-sm font-medium uppercase tracking-[0.2em]">
+                European Space Agency
+            </p>
+</div>
+</div>
+<!-- Bottom Progress/Status Section -->
+<div class="w-full max-w-sm pb-12">
+<div class="glass-card rounded-2xl p-6 flex flex-col gap-4">
+<div class="flex justify-between items-end">
+<div class="flex flex-col">
+<span class="text-xs text-primary/60 font-semibold uppercase tracking-wider mb-1">Status</span>
+<span class="text-slate-900 dark:text-slate-100 text-sm font-medium">Synchronizing orbital data</span>
+</div>
+<span class="text-primary text-xl font-bold font-display">64%</span>
+</div>
+<!-- Glassmorphism Progress Bar -->
+<div class="h-1.5 w-full bg-slate-200 dark:bg-primary/10 rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full shadow-[0_0_10px_rgba(19,236,128,0.8)]" style="width: 64%;"></div>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+</span>
+<span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium tracking-wide">SECURE ENCRYPTED CHANNEL ACTIVE</span>
+</div>
+</div>
+<!-- Footer Branding -->
+<div class="mt-8 flex justify-center opacity-40">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-900 dark:text-slate-100 text-lg">layers</span>
+<span class="text-slate-900 dark:text-slate-100 text-[10px] font-bold tracking-[0.3em] uppercase">DataHub v2.4</span>
+</div>
+</div>
+</div>
+</body></html>

@@ -42,7 +42,7 @@ import {
   Settings
 } from 'lucide-react'
 import {
-  BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend
+  BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend
 } from 'recharts'
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet'
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
@@ -487,7 +487,7 @@ function CopernicusPortal() {
                 { label: 'Services', action: scrollToServices },
                 { label: 'Data', action: () => setActivePanel('ecmwf') },
                 { label: 'Marine', action: () => setActivePanel('marine') },
-                { label: 'Air Quality', action: () => setActivePanel('cams') },
+                { label: 'Air Quality', action: () => window.location.href = '/copernicus/cams' },
                 { label: 'Climate', action: () => setActivePanel('c3s') },
               ].map(item => (
                 <button key={item.label} onClick={item.action} className={`px-4 text-slate-300 hover:text-white font-medium transition-all duration-300 rounded-lg hover:bg-white/5 ${scrolled ? 'py-1.5 text-xs' : 'py-2 text-sm'}`}>
@@ -1051,7 +1051,7 @@ function App() {
   }
 
 
-  const isCopernicusPage = location.pathname === '/copernicus';
+  const isCopernicusPage = location.pathname.startsWith('/copernicus');
 
   return (
     <div className={`${isDarkMode ? 'dark' : ''}`}>
@@ -1738,6 +1738,7 @@ function App() {
 
           {/* Copernicus Landing Page Route */}
           <Route path="/copernicus" element={<CopernicusPortal />} />
+          <Route path="/copernicus/cams" element={<CamsDashboard />} />
         </Routes>
 
         {/* Footer */}
@@ -1880,61 +1881,325 @@ function App() {
       {/* Feedback Form Modal */}
       {
         showFeedbackModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in text-slate-900 dark:text-white">
-            <div className="bg-white dark:bg-[#1c1c1e] w-full max-w-2xl rounded-[32px] overflow-hidden flex flex-col shadow-2xl relative border border-white/10">
-              <div className="p-6 md:p-8 flex justify-between items-center border-b border-black/5 dark:border-white/5">
-                <h2 className="text-2xl font-black">Send Feedback</h2>
-                <button onClick={() => setShowFeedbackModal(false)} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors">
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-
-              {/* FormSubmit Logic */}
-              <form action="https://formsubmit.co/tidawnroj@gmail.com" method="POST" className="p-6 md:p-8 flex-grow space-y-5 overflow-y-auto max-h-[80vh] custom-scrollbar">
-
-                {/* Important: Disable Captcha and Set Next parameters (Optional) */}
-                <input type="hidden" name="_captcha" value="false" />
-
-                {/* Dynamically generated timestamp submitted implicitly */}
-                <input type="hidden" name="Timestamp" value={new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' })} />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="firstName" className="text-sm font-bold text-slate-500">First Name <span className="text-red-500">*</span></label>
-                    <input type="text" name="First Name" id="firstName" required className="bg-slate-100 dark:bg-white/5 border-none rounded-xl p-3 focus:ring-2 focus:ring-blue-500 text-black dark:text-white" placeholder="John" />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="lastName" className="text-sm font-bold text-slate-500">Last Name <span className="text-red-500">*</span></label>
-                    <input type="text" name="Last Name" id="lastName" required className="bg-slate-100 dark:bg-white/5 border-none rounded-xl p-3 focus:ring-2 focus:ring-blue-500 text-black dark:text-white" placeholder="Doe" />
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="email" className="text-sm font-bold text-slate-500">Email Address <span className="text-red-500">*</span></label>
-                  <input type="email" name="email" id="email" required className="bg-slate-100 dark:bg-white/5 border-none rounded-xl p-3 focus:ring-2 focus:ring-blue-500 text-black dark:text-white" placeholder="john.doe@example.com" />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="phone" className="text-sm font-bold text-slate-500">Phone Number (Optional)</label>
-                  <input type="tel" name="Phone" id="phone" className="bg-slate-100 dark:bg-white/5 border-none rounded-xl p-3 focus:ring-2 focus:ring-blue-500 text-black dark:text-white" placeholder="+66 80 000 0000" />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="message" className="text-sm font-bold text-slate-500">Feedback / Message <span className="text-red-500">*</span></label>
-                  <textarea name="Message" id="message" required rows="4" className="bg-slate-100 dark:bg-white/5 border-none rounded-xl p-3 focus:ring-2 focus:ring-blue-500 text-black dark:text-white resize-none" placeholder="Tell us what you think..."></textarea>
-                </div>
-
-                <button type="submit" className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold text-lg py-4 rounded-xl shadow-lg shadow-blue-500/30 transition-transform active:scale-95 mt-4">
-                  Submit Feedback
-                </button>
-              </form>
-            </div>
-          </div>
+          {/* ... */ }
         )
       }
 
     </div>
   )
+}
+
+function CamsDashboard() {
+  const [activeTab, setActiveTab] = useState('Overview');
+  const [smogTab, setSmogTab] = useState('PM2.5');
+
+  // Hardcoded map points to match the design visually
+  const mapPoints = [
+    { city: 'Paris', aqi: 42, lat: 48.8566, lon: 2.3522, color: '#13ec92' },
+    { city: 'Berlin', aqi: 85, lat: 52.52, lon: 13.405, color: '#facc15' },
+    { city: 'Blank', aqi: 0, lat: 46.5, lon: 18.0, color: '#facc15' } // extra dot from image
+  ];
+
+  const hotspots = [
+    { rank: '01', city: 'Kraków, PL', category: 'PM2.5 Alert', aqi: 142, color: '#ef4444' },
+    { rank: '02', city: 'Milan, IT', category: 'High Traffic', aqi: 128, color: '#ef4444' },
+    { rank: '03', city: 'Sofia, BG', category: 'Industrial', aqi: 115, color: '#facc15' },
+    { rank: '04', city: 'Bucharest, RO', category: 'Moderate', aqi: 98, color: '#facc15' },
+    { rank: '05', city: 'Paris, FR', category: 'Moderate', aqi: 42, color: '#13ec92' },
+  ];
+
+  // Dummy chart data for "Smog Tracking (24h)"
+  const chartData = [
+    { time: '00:00', value: 20 },
+    { time: '04:00', value: 25 },
+    { time: '08:00', value: 45 },
+    { time: '12:00', value: 70 },
+    { time: '14:00', value: 42 },
+    { time: '16:00', value: 35 },
+    { time: '20:00', value: 25 },
+    { time: '23:59', value: 20 },
+  ];
+
+  return (
+    <div className="bg-[#051c14] min-h-screen font-['Space_Grotesk'] text-slate-100 p-4 md:p-6 lg:p-8">
+      {/* HEADER */}
+      <header className="flex flex-wrap items-center justify-between border-b border-[#13ec92]/20 pb-4 mb-6 gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-[#13ec92]/20 flex items-center justify-center border border-[#13ec92]/30">
+            <Globe className="w-6 h-6 text-[#13ec92]" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-tight">CAMS Dashboard</h1>
+            <p className="text-[#13ec92] text-xs font-medium">Copernicus Atmosphere Monitoring Service</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-8">
+          <Link to="/copernicus" className="text-slate-300 hover:text-white flex items-center gap-2 text-sm font-medium transition-colors">
+            <ArrowRight className="w-4 h-4 rotate-180" /> Back to Copernicus Hub
+          </Link>
+          <div className="w-px h-6 bg-[#13ec92]/20 hidden md:block"></div>
+          <nav className="hidden md:flex gap-6">
+            {['Overview', 'Analysis', 'Reports'].map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`text-sm font-medium pb-2 border-b-2 transition-all ${activeTab === tab ? 'text-[#13ec92] border-[#13ec92]' : 'text-slate-400 border-transparent hover:text-white'}`}
+              >
+                {tab}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <button className="relative text-slate-300 hover:text-white">
+            <Bell className="w-5 h-5" />
+            <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#13ec92] rounded-full"></span>
+          </button>
+          <div className="w-9 h-9 rounded-full bg-slate-700 overflow-hidden border-2 border-[#13ec92]/50">
+            <img src="https://i.pravatar.cc/100?img=33" alt="User" className="w-full h-full object-cover" />
+          </div>
+        </div>
+      </header>
+
+      {/* MAIN GRID */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {/* LEFT COLUMN (Map + Chart) */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
+
+          {/* MAP SECTION */}
+          <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-5 flex flex-col relative overflow-hidden h-[450px]">
+            <div className="flex justify-between items-start mb-4 relative z-10 w-full">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-[#13ec92]/10 rounded-lg"><Sun className="w-5 h-5 text-[#13ec92]" /></div>
+                <div>
+                  <h2 className="text-white font-bold text-base">European Air Quality Monitor</h2>
+                  <p className="text-[#13ec92] text-xs">Real-time PM2.5 & PM10 visualization</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#13ec92]/50" />
+                  <input type="text" placeholder="Search city or region..." className="bg-[#051c14] border border-[#13ec92]/20 rounded-lg py-2 pl-9 pr-4 text-sm text-white focus:outline-none focus:border-[#13ec92]/50 w-48 transition-all xl:w-64" />
+                </div>
+                <button className="bg-[#13ec92] hover:bg-[#10c87a] text-[#051c14] px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors">
+                  <Download className="w-4 h-4" /> Export
+                </button>
+              </div>
+            </div>
+
+            {/* Fake Map Visualization */}
+            <div className="flex-1 w-full bg-gradient-to-br from-[#103024] to-[#0a2319] rounded-xl relative overflow-hidden border border-[#13ec92]/5">
+              {/* Map Lines */}
+              <svg className="absolute inset-0 w-full h-full opacity-20" xmlns="http://www.w3.org/2000/svg">
+                <line x1="20%" y1="0" x2="60%" y2="100%" stroke="#13ec92" strokeWidth="1" strokeDasharray="5,5" />
+                <line x1="0" y1="30%" x2="100%" y2="10%" stroke="#13ec92" strokeWidth="1" strokeDasharray="5,5" />
+                <line x1="80%" y1="0" x2="90%" y2="100%" stroke="#13ec92" strokeWidth="1" strokeDasharray="5,5" />
+              </svg>
+
+              {/* Markers */}
+              {/* Paris */}
+              <div className="absolute top-[40%] left-[25%] flex flex-col items-center group cursor-pointer transition-transform hover:scale-110">
+                <div className="w-4 h-4 rounded-full bg-[#13ec92] border-2 border-white shadow-[0_0_15px_rgba(19,236,146,0.8)] relative z-10 animate-pulse"></div>
+                <div className="mt-2 bg-[#051c14]/80 backdrop-blur-sm border border-[#13ec92]/20 px-3 py-1 rounded-md text-xs font-bold text-white shadow-lg opacity-80 group-hover:opacity-100 transition-opacity">Paris: 42 AQI</div>
+              </div>
+
+              {/* Berlin */}
+              <div className="absolute top-[60%] left-[45%] flex flex-col items-center group cursor-pointer transition-transform hover:scale-110">
+                <div className="w-4 h-4 rounded-full bg-[#facc15] border-2 border-white shadow-[0_0_15px_rgba(250,204,21,0.8)] relative z-10 animate-pulse"></div>
+                <div className="mt-2 bg-[#051c14]/80 backdrop-blur-sm border border-[#13ec92]/20 px-3 py-1 rounded-md text-xs font-bold text-white shadow-lg opacity-80 group-hover:opacity-100 transition-opacity">Berlin: 85 AQI</div>
+              </div>
+
+              {/* Blank dot */}
+              <div className="absolute top-[65%] left-[65%] flex flex-col items-center">
+                <div className="w-3 h-3 rounded-full bg-[#13ec92] border-2 border-[#13ec92]/30 shadow-[0_0_10px_rgba(19,236,146,0.5)] relative z-10"></div>
+              </div>
+
+              {/* City text on map */}
+              <span className="absolute top-[10%] left-[15%] text-xs font-bold text-[#13ec92]/20 -rotate-45">Travemünde</span>
+
+              {/* Zoom Buttons */}
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-2">
+                <button className="w-8 h-8 bg-[#051c14]/80 backdrop-blur-sm border border-[#13ec92]/20 rounded-lg flex items-center justify-center text-white hover:bg-[#13ec92] hover:text-[#051c14] transition-colors"><Plus className="w-4 h-4" /></button>
+                <button className="w-8 h-8 bg-[#051c14]/80 backdrop-blur-sm border border-[#13ec92]/20 rounded-lg flex items-center justify-center text-white hover:bg-[#13ec92] hover:text-[#051c14] transition-colors"><Minus className="w-4 h-4" /></button>
+                <button className="w-8 h-8 bg-[#051c14]/80 backdrop-blur-sm border border-[#13ec92]/20 rounded-lg flex items-center justify-center text-white hover:bg-[#13ec92] hover:text-[#051c14] transition-colors mt-2"><Layers className="w-4 h-4" /></button>
+              </div>
+
+              {/* Legend */}
+              <div className="absolute bottom-4 left-4 bg-[#051c14]/80 backdrop-blur-md rounded-lg border border-[#13ec92]/20 p-3 w-48">
+                <span className="text-[10px] font-bold text-white uppercase tracking-wider mb-2 block">Pollution Intensity</span>
+                <div className="h-2 w-full bg-gradient-to-r from-[#13ec92] via-[#facc15] to-[#ef4444] rounded-full mb-1"></div>
+                <div className="flex justify-between text-[9px] text-slate-400 font-bold uppercase">
+                  <span>Low</span><span>Med</span><span>High</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SMOG TRACKING CHART */}
+          <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-5 flex flex-col h-[300px]">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-white font-bold text-base">Smog Tracking (24h)</h2>
+                <p className="text-[#13ec92] text-xs">Regional average across monitored stations</p>
+              </div>
+              <div className="flex bg-[#051c14] rounded-lg p-1 border border-[#13ec92]/20">
+                {['PM2.5', 'PM10', 'NO2'].map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setSmogTab(t)}
+                    className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${smogTab === t ? 'bg-[#13ec92]/10 text-[#13ec92]' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex-1 w-full relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorSmog" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#13ec92" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#13ec92" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#4ade80', fontSize: 10, fontWeight: 700 }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={false} />
+                  <CartesianGrid strokeDasharray="5 5" stroke="#13ec92" opacity={0.1} vertical={false} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#051c14', borderColor: '#13ec92', borderRadius: '8px' }}
+                    itemStyle={{ color: '#13ec92', fontWeight: 'bold' }}
+                    labelStyle={{ color: '#fff' }}
+                  />
+                  <Area type="monotone" dataKey="value" stroke="#13ec92" strokeWidth={3} fillOpacity={1} fill="url(#colorSmog)" />
+                </AreaChart>
+              </ResponsiveContainer>
+
+              {/* Floating Value Point */}
+              <div className="absolute left-[50%] top-[40%] flex flex-col items-center">
+                <div className="bg-[#051c14] border border-[#13ec92] px-2 py-1 rounded-md text-center mb-2 shadow-[0_0_15px_rgba(19,236,146,0.3)]">
+                  <div className="text-[10px] font-bold text-white">14:00</div>
+                  <div className="text-[10px] font-bold text-[#13ec92]">AQI 42</div>
+                </div>
+                <div className="w-3 h-3 rounded-full bg-[#051c14] border-2 border-[#13ec92] relative z-10 shadow-[0_0_10px_rgba(19,236,146,0.8)]"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN */}
+        <div className="flex flex-col gap-6">
+
+          {/* CURRENT AQI */}
+          <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92] p-5 relative overflow-hidden shadow-[0_4px_30px_rgba(19,236,146,0.1)]">
+            {/* Background icon */}
+            <Leaf className="absolute -right-4 top-10 w-48 h-48 text-[#13ec92]/5 -rotate-12 pointer-events-none" />
+
+            <div className="flex items-center gap-2 text-[#13ec92] font-bold text-xs uppercase tracking-widest mb-4">
+              <Sun className="w-4 h-4" /> CURRENT AQI
+            </div>
+
+            <div className="flex items-baseline gap-2 mb-8">
+              <span className="text-6xl font-black text-white">85</span>
+              <span className="text-xl font-bold text-[#facc15]">Moderate</span>
+            </div>
+
+            <div className="flex justify-between items-end border-t border-[#13ec92]/20 pt-4">
+              <div>
+                <span className="text-xs text-[#13ec92] block mb-1">Smog Level</span>
+                <span className="text-lg font-bold text-white">Medium</span>
+              </div>
+              <div className="text-right">
+                <span className="text-xs text-[#13ec92] block mb-1">Trend (1h)</span>
+                <span className="text-sm font-bold text-[#ef4444] flex items-center gap-1 justify-end">
+                  <TrendingUp className="w-4 h-4" /> +2.4%
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* POLLUTANT GRID */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-[#0a2319] rounded-xl border border-[#13ec92]/10 p-4 hover:border-[#13ec92]/40 transition-colors">
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-xs font-bold text-[#13ec92] uppercase">PM 2.5</span>
+                <CloudRain className="w-3 h-3 text-slate-500" />
+              </div>
+              <div className="text-2xl font-black text-white mb-1">12.4</div>
+              <div className="text-[10px] text-[#13ec92]/60">µg/m³</div>
+            </div>
+            <div className="bg-[#0a2319] rounded-xl border border-[#13ec92]/10 p-4 hover:border-[#13ec92]/40 transition-colors">
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-xs font-bold text-[#13ec92] uppercase">PM 10</span>
+                <CloudRain className="w-3 h-3 text-slate-500" />
+              </div>
+              <div className="text-2xl font-black text-white mb-1">24.8</div>
+              <div className="text-[10px] text-[#13ec92]/60">µg/m³</div>
+            </div>
+            <div className="bg-[#0a2319] rounded-xl border border-[#13ec92]/10 p-4 hover:border-[#13ec92]/40 transition-colors">
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-xs font-bold text-[#13ec92] uppercase">O3</span>
+                <Wind className="w-3 h-3 text-slate-500" />
+              </div>
+              <div className="text-2xl font-black text-white mb-1">45.2</div>
+              <div className="text-[10px] text-[#13ec92]/60">µg/m³</div>
+            </div>
+            <div className="bg-[#0a2319] rounded-xl border border-[#13ec92]/10 p-4 hover:border-[#13ec92]/40 transition-colors">
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-xs font-bold text-[#13ec92] uppercase">NO2</span>
+                <Thermometer className="w-3 h-3 text-slate-500" />
+              </div>
+              <div className="text-2xl font-black text-white mb-1">18.1</div>
+              <div className="text-[10px] text-[#13ec92]/60">µg/m³</div>
+            </div>
+          </div>
+
+          {/* HOTSPOTS */}
+          <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-5 flex flex-col flex-grow">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-white font-bold text-sm">Pollution Hotspots</h2>
+              <button className="text-[#13ec92] text-xs font-bold hover:underline">View All</button>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              {hotspots.map((spot, i) => (
+                <div key={i} className="flex items-center justify-between p-3 bg-[#051c14] rounded-xl border border-[#13ec92]/5 hover:border-[#13ec92]/20 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-bold text-[#13ec92]/50">{spot.rank}</span>
+                    <div>
+                      <div className="text-sm font-bold text-white">{spot.city}</div>
+                      <div className="text-[10px] text-[#13ec92]">{spot.category}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-sm font-black" style={{ color: spot.color }}>{spot.aqi} AQI</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* FOOTER */}
+      <footer className="mt-8 pt-4 border-t border-[#13ec92]/20 flex justify-between items-center text-xs font-medium">
+        <div className="flex items-center gap-2 text-[#13ec92]">
+          <div className="w-2 h-2 rounded-full bg-[#13ec92] animate-pulse"></div>
+          System Operational <span className="text-[#13ec92]/50 ml-2">Last Updated: 14:02 UTC</span>
+        </div>
+        <div className="flex gap-4 text-[#13ec92]/70">
+          <a href="#" className="hover:text-[#13ec92]">Privacy Policy</a>
+          <a href="#" className="hover:text-[#13ec92]">Data Sources</a>
+          <a href="#" className="hover:text-[#13ec92]">Copernicus API</a>
+        </div>
+      </footer>
+    </div>
+  );
 }
 
 export default App
