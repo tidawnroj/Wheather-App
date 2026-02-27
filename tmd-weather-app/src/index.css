@@ -26,6 +26,7 @@
   body {
     @apply transition-colors duration-700 font-sans antialiased text-[var(--text-main)] bg-[var(--bg-color)] min-h-[100vh];
     overflow-x: hidden;
+    zoom: 90%;
   }
 }
 
