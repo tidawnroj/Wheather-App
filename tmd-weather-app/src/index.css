@@ -119,3 +119,36 @@
   background: var(--glass-border);
   border-radius: 10px;
 }
+
+/* Smooth border glow fade animation */
+@keyframes border-glow {
+  0% {
+    box-shadow: 0 0 8px rgba(19, 236, 146, 0.2), 0 0 16px rgba(19, 236, 146, 0.1);
+    border-color: rgba(19, 236, 146, 0.3);
+  }
+
+  25% {
+    box-shadow: 0 0 12px rgba(19, 236, 146, 0.4), 0 0 24px rgba(19, 236, 146, 0.2);
+    border-color: rgba(19, 236, 146, 0.6);
+  }
+
+  50% {
+    box-shadow: 0 0 18px rgba(19, 236, 146, 0.6), 0 0 35px rgba(19, 236, 146, 0.3);
+    border-color: rgba(19, 236, 146, 0.9);
+  }
+
+  75% {
+    box-shadow: 0 0 12px rgba(19, 236, 146, 0.4), 0 0 24px rgba(19, 236, 146, 0.2);
+    border-color: rgba(19, 236, 146, 0.6);
+  }
+
+  100% {
+    box-shadow: 0 0 8px rgba(19, 236, 146, 0.2), 0 0 16px rgba(19, 236, 146, 0.1);
+    border-color: rgba(19, 236, 146, 0.3);
+  }
+}
+
+.animate-border-glow {
+  animation: border-glow 3s ease-in-out infinite;
+  border: 2px solid rgba(19, 236, 146, 0.3);
+}

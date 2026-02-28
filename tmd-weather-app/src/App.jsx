@@ -39,12 +39,15 @@ import {
   Plus,
   Minus,
   Terminal,
-  Settings
+  Settings,
+  Zap,
+  Lock,
+  Waves
 } from 'lucide-react'
 import {
-  BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend
+  BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, ReferenceDot
 } from 'recharts'
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMapEvents, useMap } from 'react-leaflet'
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
@@ -100,6 +103,7 @@ function CopernicusPortal() {
 
   // === DATA STATE ===
   const [activePanel, setActivePanel] = useState(null);
+  const [showToolSelector, setShowToolSelector] = useState(false);
   const [ecmwfData, setEcmwfData] = useState(null);
   const [camsData, setCamsData] = useState(null);
   const [c3sData, setC3sData] = useState(null);
@@ -451,6 +455,60 @@ function CopernicusPortal() {
         </div>
       )}
 
+      {/* ========== TOOL SELECTOR MODAL ========== */}
+      {showToolSelector && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" onClick={() => setShowToolSelector(false)}>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md"></div>
+          <div className="relative z-10 max-w-2xl w-full rounded-2xl p-8" onClick={e => e.stopPropagation()} style={{ background: 'linear-gradient(135deg, rgba(10, 35, 25, 0.95) 0%, rgba(6, 78, 59, 0.9) 100%)', border: '1px solid rgba(19, 236, 146, 0.3)', boxShadow: '0 0 60px rgba(19, 236, 146, 0.15)' }}>
+            <button onClick={() => setShowToolSelector(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#13ec92]/10 border border-[#13ec92]/20 text-[#13ec92] text-xs font-bold uppercase tracking-wider mb-4">
+                <Layers className="w-3.5 h-3.5" /> Select Tool
+              </div>
+              <h2 className="text-2xl font-black text-white">Choose a Dashboard</h2>
+              <p className="text-slate-400 text-sm mt-1">Select the interactive tool you want to explore</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* CAMS — Active */}
+              <Link to="/copernicus/cams" onClick={() => setShowToolSelector(false)} className="group p-5 rounded-xl border-2 border-[#13ec92]/40 hover:border-[#13ec92] transition-all duration-300 cursor-pointer hover:shadow-[0_0_30px_rgba(19,236,146,0.2)] hover:-translate-y-1" style={{ background: 'rgba(19, 236, 146, 0.05)' }}>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2.5 rounded-lg bg-[#13ec92]/20 text-[#13ec92]">
+                    <Wind className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-white font-bold text-sm group-hover:text-[#13ec92] transition-colors">CAMS Air Quality</h3>
+                    <span className="text-[10px] text-[#13ec92] font-bold uppercase tracking-wider">Active</span>
+                  </div>
+                </div>
+                <p className="text-slate-400 text-xs leading-relaxed mb-3">Real-time AQI monitoring, PM2.5/PM10 heatmaps, and 85+ station data worldwide.</p>
+                <div className="flex items-center gap-1.5 text-[#13ec92] text-xs font-bold group-hover:gap-2.5 transition-all">
+                  Open Dashboard <ArrowRight className="w-3.5 h-3.5" />
+                </div>
+              </Link>
+              {/* Wave Height — Locked */}
+              <div className="relative p-5 rounded-xl border-2 border-slate-700/50 opacity-60 cursor-not-allowed" style={{ background: 'rgba(100, 116, 139, 0.05)' }}>
+                <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-slate-700/60 text-slate-400 text-[9px] font-bold uppercase tracking-wider flex items-center gap-1">
+                  <Lock className="w-2.5 h-2.5" /> Coming Soon
+                </div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2.5 rounded-lg bg-slate-700/30 text-slate-500">
+                    <Waves className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-slate-400 font-bold text-sm">Wave Height Monitor</h3>
+                    <span className="text-[10px] text-slate-600 font-bold uppercase tracking-wider">Locked</span>
+                  </div>
+                </div>
+                <p className="text-slate-600 text-xs leading-relaxed mb-3">Ocean wave monitoring, marine forecasts, and coastal hazard alerts. Under development.</p>
+                <div className="flex items-center gap-1.5 text-slate-600 text-xs font-bold">
+                  <Lock className="w-3 h-3" /> Requires unlock
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Liquid Glass Header — Skitbit Style */}
       <header className="fixed top-0 left-0 right-0 z-50 w-full flex justify-center transition-all duration-500 ease-out" style={{ padding: scrolled ? '8px 16px' : '14px 16px' }}>
         <div className="w-full max-w-6xl transition-all duration-500 ease-out" style={{
@@ -532,6 +590,12 @@ function CopernicusPortal() {
                   <Globe className="w-5 h-5" />
                   Explore Data
                 </button>
+                <button onClick={() => setShowToolSelector(true)} className="flex items-center gap-3 rounded-lg h-12 px-8 text-white text-base font-black transition-all relative overflow-hidden group border-2 border-[#13ec92]/80 shadow-[0_0_20px_rgba(19,236,146,0.6)] hover:shadow-[0_0_40px_rgba(19,236,146,1)] hover:scale-105 hover:-translate-y-1 cursor-pointer" style={{ background: 'linear-gradient(90deg, #0a2319 0%, #064e3b 100%)' }}>
+                  <div className="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out"></div>
+                  <Wind className="w-6 h-6 text-[#13ec92] animate-pulse drop-shadow-[0_0_8px_rgba(19,236,146,0.8)]" />
+                  <span className="relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-white to-[#13ec92] drop-shadow-md">Launch Dashboard</span>
+                  <ArrowRight className="w-5 h-5 text-[#13ec92] group-hover:translate-x-1.5 transition-transform drop-shadow-[0_0_8px_rgba(19,236,146,0.8)]" />
+                </button>
                 <button onClick={() => window.open('https://cds.climate.copernicus.eu/how-to-api', '_blank')} className="flex items-center gap-2 rounded-lg h-12 px-6 text-white text-base font-bold hover:bg-emerald-900/50 transition-all" style={{ background: 'rgba(6, 78, 59, 0.3)', backdropFilter: 'blur(12px)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
                   <FileText className="w-5 h-5" />
                   Documentation
@@ -551,7 +615,38 @@ function CopernicusPortal() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Card 1: ECMWF */}
+
+              {/* BENTO HERO: CAMS Air Quality — FEATURED (Full width) */}
+              <div className="lg:col-span-2 rounded-xl overflow-hidden group transition-all duration-300 flex flex-col lg:flex-row relative" style={{ background: 'rgba(6, 78, 59, 0.4)', backdropFilter: 'blur(16px)', border: '2px solid rgba(19, 236, 146, 0.5)', boxShadow: '0 0 40px rgba(19, 236, 146, 0.15), 0 0 80px rgba(19, 236, 146, 0.05)' }}>
+                {/* Featured badge */}
+                <div className="absolute top-3 left-3 z-30 bg-[#13ec92] text-[#051c14] text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-[0_0_20px_rgba(19,236,146,0.6)] animate-pulse">
+                  ★ Featured Dashboard
+                </div>
+                <div className="relative lg:w-1/2 h-56 lg:h-auto w-full overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-[#10221a] via-transparent to-transparent z-10"></div>
+                  <div className="w-full h-full bg-cover bg-center group-hover:scale-110 transition-transform duration-1000" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDRwBfHWEZQNgBhrObmzbig0KSiMhXTfxMIpUbY35WGkTqQQL6YQZZUdOrJFwVzxfnSZl7HnZIN0Z74Ty06fF6n65bfrg7o0bBufYwDna0dLJrQAnFmgQsgoV8zfZoGRtJkp_riWTjw8rPSXXuGBaUxqEQhfXdZvHw_gEjZ4cB3kXII0Q64D29UAQYn0wRYtqa8O_s1MfMsO_NgCNz20hZXMO0AP_dbIsROKlbDGNORbUWTpxlUE34v3cZ8nPx6Jk-2E5V_kAUGZvA')" }}></div>
+                  <div className="absolute top-3 right-3 z-20 bg-black/60 backdrop-blur-sm rounded px-2 py-1 text-xs font-mono border" style={{ color: aqiInfo.color, borderColor: `${aqiInfo.color}33` }}>
+                    PM2.5: {currentPm25 ? `${currentPm25.toFixed(0)} μg/m³` : 'LOADING...'}
+                  </div>
+                </div>
+                <div className="lg:w-1/2 p-6 flex flex-col justify-center">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="p-3 rounded-xl bg-[#13ec92]/20 text-[#13ec92] shadow-[0_0_15px_rgba(19,236,146,0.3)]">
+                      <Wind className="w-7 h-7" />
+                    </div>
+                  </div>
+                  <h3 className="text-white text-2xl font-black mb-2 group-hover:text-[#13ec92] transition-colors">CAMS Dashboard</h3>
+                  <p className="text-slate-400 text-sm mb-2 leading-relaxed">
+                    Continuous monitoring of atmospheric composition. Visualize PM2.5/PM10 heatmaps and ozone layer depletion data globally.
+                  </p>
+                  <p className="text-[#13ec92]/60 text-[10px] font-bold mb-4">85 stations • Real-time AQI • Interactive heat maps • Station selector</p>
+                  <button onClick={() => setShowToolSelector(true)} className="w-full py-3 rounded-lg bg-[#13ec92] text-[#051c14] text-sm font-black hover:brightness-110 transition-all flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(19,236,146,0.5)] hover:shadow-[0_0_40px_rgba(19,236,146,0.7)] cursor-pointer border-none">
+                    <Zap className="w-4 h-4" /> Launch Interactive Dashboard
+                  </button>
+                </div>
+              </div>
+
+              {/* Card 2: ECMWF */}
               <div className="rounded-xl overflow-hidden group hover:border-[#13ec92]/40 transition-all duration-300 flex flex-col h-full" style={{ background: 'rgba(6, 78, 59, 0.3)', backdropFilter: 'blur(12px)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
                 <div className="relative h-48 w-full overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-t from-[#10221a] to-transparent z-10"></div>
@@ -572,31 +667,6 @@ function CopernicusPortal() {
                   </p>
                   <button onClick={() => setActivePanel('ecmwf')} className="w-full py-2 rounded border border-[#13ec92]/30 text-[#13ec92] text-sm font-medium hover:bg-[#13ec92] hover:text-[#10221a] transition-all flex items-center justify-center gap-2">
                     Access Forecasts
-                  </button>
-                </div>
-              </div>
-
-              {/* Card 2: CAMS Air Quality */}
-              <div className="rounded-xl overflow-hidden group hover:border-[#13ec92]/40 transition-all duration-300 flex flex-col h-full" style={{ background: 'rgba(6, 78, 59, 0.3)', backdropFilter: 'blur(12px)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                <div className="relative h-48 w-full overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#10221a] to-transparent z-10"></div>
-                  <div className="w-full h-full bg-cover bg-center group-hover:scale-105 transition-transform duration-700" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDRwBfHWEZQNgBhrObmzbig0KSiMhXTfxMIpUbY35WGkTqQQL6YQZZUdOrJFwVzxfnSZl7HnZIN0Z74Ty06fF6n65bfrg7o0bBufYwDna0dLJrQAnFmgQsgoV8zfZoGRtJkp_riWTjw8rPSXXuGBaUxqEQhfXdZvHw_gEjZ4cB3kXII0Q64D29UAQYn0wRYtqa8O_s1MfMsO_NgCNz20hZXMO0AP_dbIsROKlbDGNORbUWTpxlUE34v3cZ8nPx6Jk-2E5V_kAUGZvA')" }}></div>
-                  <div className="absolute top-3 right-3 z-20 bg-black/60 backdrop-blur-sm rounded px-2 py-1 text-xs font-mono border" style={{ color: aqiInfo.color, borderColor: `${aqiInfo.color}33` }}>
-                    PM2.5: {currentPm25 ? `${currentPm25.toFixed(0)} μg/m³` : 'LOADING...'}
-                  </div>
-                </div>
-                <div className="p-6 flex flex-col flex-grow">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="p-2 rounded-lg bg-emerald-900/50 text-[#13ec92]">
-                      <Wind className="w-6 h-6" />
-                    </div>
-                  </div>
-                  <h3 className="text-white text-xl font-bold mb-2 group-hover:text-[#13ec92] transition-colors">CAMS Air Quality</h3>
-                  <p className="text-slate-400 text-sm mb-6 flex-grow leading-relaxed">
-                    Continuous monitoring of atmospheric composition. Visualize PM2.5/PM10 heatmaps and ozone layer depletion data globally.
-                  </p>
-                  <button onClick={() => setActivePanel('cams')} className="w-full py-2 rounded border border-[#13ec92]/30 text-[#13ec92] text-sm font-medium hover:bg-[#13ec92] hover:text-[#10221a] transition-all flex items-center justify-center gap-2">
-                    View Air Quality
                   </button>
                 </div>
               </div>
@@ -1084,9 +1154,8 @@ function App() {
                 <Bell className="w-4 h-4" /> Alerts
                 {weatherAlerts.length > 0 && <span className="bg-red-500 text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center animate-pulse">{weatherAlerts.length}</span>}
               </button>
-              <Link to="/copernicus" className="transition-all flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-[#0a1c12] hover:brightness-110 hover:scale-105 active:scale-95" style={{
+              <Link to="/copernicus" className="transition-all flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-[#0a1c12] hover:brightness-110 hover:scale-105 active:scale-95 animate-border-glow" style={{
                 background: 'linear-gradient(135deg, #13ec92 0%, #a3f76e 100%)',
-                boxShadow: '0 4px 15px rgba(19, 236, 146, 0.4), inset 0 1px 0 rgba(255,255,255,0.3)',
               }}>
                 <Globe className="w-4 h-4" /> Copernicus
               </Link>
@@ -1881,7 +1950,20 @@ function App() {
       {/* Feedback Form Modal */}
       {
         showFeedbackModal && (
-          {/* ... */ }
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowFeedbackModal(false)}>
+            <div className="bg-white dark:bg-[#1a1a2e] rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Send Feedback</h2>
+                <button onClick={() => setShowFeedbackModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white text-xl font-bold">✕</button>
+              </div>
+              <form onSubmit={(e) => { e.preventDefault(); const fd = new FormData(e.target); window.open(`mailto:tichakorn.dev@gmail.com?subject=TMD Weather Feedback&body=${encodeURIComponent(`From: ${fd.get('name')} (${fd.get('email')})\n\n${fd.get('message')}`)}`); setShowFeedbackModal(false); }} className="space-y-3">
+                <input name="name" placeholder="Your Name" required className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 outline-none" />
+                <input name="email" type="email" placeholder="Email Address" required className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 outline-none" />
+                <textarea name="message" placeholder="Your feedback..." rows={4} required className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 outline-none resize-none" />
+                <button type="submit" className="w-full py-2.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-bold text-sm transition-colors">Send Feedback</button>
+              </form>
+            </div>
+          </div>
         )
       }
 
@@ -1892,36 +1974,412 @@ function App() {
 function CamsDashboard() {
   const [activeTab, setActiveTab] = useState('Overview');
   const [smogTab, setSmogTab] = useState('PM2.5');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [airData, setAirData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [mapLayer, setMapLayer] = useState('air');
 
-  // Hardcoded map points to match the design visually
-  const mapPoints = [
-    { city: 'Paris', aqi: 42, lat: 48.8566, lon: 2.3522, color: '#13ec92' },
-    { city: 'Berlin', aqi: 85, lat: 52.52, lon: 13.405, color: '#facc15' },
-    { city: 'Blank', aqi: 0, lat: 46.5, lon: 18.0, color: '#facc15' } // extra dot from image
-  ];
+  // Override body background to dark when CAMS dashboard is active
+  useEffect(() => {
+    const origBody = document.body.style.background;
+    const origHtml = document.documentElement.style.background;
+    document.body.style.background = '#051c14';
+    document.documentElement.style.background = '#051c14';
+    return () => {
+      document.body.style.background = origBody;
+      document.documentElement.style.background = origHtml;
+    };
+  }, []);
+  const [mapMarkers, setMapMarkers] = useState([]);
+  const [layerCache, setLayerCache] = useState({});
+  const [layerLoading, setLayerLoading] = useState(false);
+  const [selectedStation, setSelectedStation] = useState(null);
+  const [stationData, setStationData] = useState(null);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [stationSearch, setStationSearch] = useState('');
+  const [showStationPicker, setShowStationPicker] = useState(false);
+  const [weatherTileLayer, setWeatherTileLayer] = useState('none');
+  const OWM_API_KEY = '2af0d16d3eb5622702e2c1c21d7e4040';
+  const [showCredits, setShowCredits] = useState(false);
+  const [showAllHotspots, setShowAllHotspots] = useState(false);
 
-  const hotspots = [
-    { rank: '01', city: 'Kraków, PL', category: 'PM2.5 Alert', aqi: 142, color: '#ef4444' },
-    { rank: '02', city: 'Milan, IT', category: 'High Traffic', aqi: 128, color: '#ef4444' },
-    { rank: '03', city: 'Sofia, BG', category: 'Industrial', aqi: 115, color: '#facc15' },
-    { rank: '04', city: 'Bucharest, RO', category: 'Moderate', aqi: 98, color: '#facc15' },
-    { rank: '05', city: 'Paris, FR', category: 'Moderate', aqi: 42, color: '#13ec92' },
-  ];
+  // 100 Global cities
+  const GLOBAL_CITIES = useMemo(() => [
+    // Asia (25)
+    { name: 'Beijing', country: 'CN', lat: 39.9042, lon: 116.4074 },
+    { name: 'Shanghai', country: 'CN', lat: 31.2304, lon: 121.4737 },
+    { name: 'Delhi', country: 'IN', lat: 28.6139, lon: 77.2090 },
+    { name: 'Mumbai', country: 'IN', lat: 19.0760, lon: 72.8777 },
+    { name: 'Kolkata', country: 'IN', lat: 22.5726, lon: 88.3639 },
+    { name: 'Tokyo', country: 'JP', lat: 35.6762, lon: 139.6503 },
+    { name: 'Osaka', country: 'JP', lat: 34.6937, lon: 135.5023 },
+    { name: 'Bangkok', country: 'TH', lat: 13.7563, lon: 100.5018 },
+    { name: 'Jakarta', country: 'ID', lat: -6.2088, lon: 106.8456 },
+    { name: 'Seoul', country: 'KR', lat: 37.5665, lon: 126.9780 },
+    { name: 'Dubai', country: 'AE', lat: 25.2048, lon: 55.2708 },
+    { name: 'Singapore', country: 'SG', lat: 1.3521, lon: 103.8198 },
+    { name: 'Hong Kong', country: 'HK', lat: 22.3193, lon: 114.1694 },
+    { name: 'Taipei', country: 'TW', lat: 25.0330, lon: 121.5654 },
+    { name: 'Manila', country: 'PH', lat: 14.5995, lon: 120.9842 },
+    { name: 'Hanoi', country: 'VN', lat: 21.0285, lon: 105.8542 },
+    { name: 'Dhaka', country: 'BD', lat: 23.8103, lon: 90.4125 },
+    { name: 'Karachi', country: 'PK', lat: 24.8607, lon: 67.0011 },
+    { name: 'Tehran', country: 'IR', lat: 35.6892, lon: 51.3890 },
+    { name: 'Riyadh', country: 'SA', lat: 24.7136, lon: 46.6753 },
+    { name: 'Kuala Lumpur', country: 'MY', lat: 3.1390, lon: 101.6869 },
+    { name: 'Chengdu', country: 'CN', lat: 30.5728, lon: 104.0668 },
+    { name: 'Guangzhou', country: 'CN', lat: 23.1291, lon: 113.2644 },
+    { name: 'Ho Chi Minh', country: 'VN', lat: 10.8231, lon: 106.6297 },
+    { name: 'Baghdad', country: 'IQ', lat: 33.3152, lon: 44.3661 },
+    // Europe (20)
+    { name: 'London', country: 'GB', lat: 51.5074, lon: -0.1278 },
+    { name: 'Paris', country: 'FR', lat: 48.8566, lon: 2.3522 },
+    { name: 'Berlin', country: 'DE', lat: 52.5200, lon: 13.4050 },
+    { name: 'Moscow', country: 'RU', lat: 55.7558, lon: 37.6173 },
+    { name: 'Istanbul', country: 'TR', lat: 41.0082, lon: 28.9784 },
+    { name: 'Madrid', country: 'ES', lat: 40.4168, lon: -3.7038 },
+    { name: 'Rome', country: 'IT', lat: 41.9028, lon: 12.4964 },
+    { name: 'Warsaw', country: 'PL', lat: 52.2297, lon: 21.0122 },
+    { name: 'Vienna', country: 'AT', lat: 48.2082, lon: 16.3738 },
+    { name: 'Amsterdam', country: 'NL', lat: 52.3676, lon: 4.9041 },
+    { name: 'Stockholm', country: 'SE', lat: 59.3293, lon: 18.0686 },
+    { name: 'Prague', country: 'CZ', lat: 50.0755, lon: 14.4378 },
+    { name: 'Athens', country: 'GR', lat: 37.9838, lon: 23.7275 },
+    { name: 'Bucharest', country: 'RO', lat: 44.4268, lon: 26.1025 },
+    { name: 'Budapest', country: 'HU', lat: 47.4979, lon: 19.0402 },
+    { name: 'Sofia', country: 'BG', lat: 42.6977, lon: 23.3219 },
+    { name: 'Oslo', country: 'NO', lat: 59.9139, lon: 10.7522 },
+    { name: 'Lisbon', country: 'PT', lat: 38.7223, lon: -9.1393 },
+    { name: 'Dublin', country: 'IE', lat: 53.3498, lon: -6.2603 },
+    { name: 'Zürich', country: 'CH', lat: 47.3769, lon: 8.5417 },
+    // Americas (20)
+    { name: 'New York', country: 'US', lat: 40.7128, lon: -74.0060 },
+    { name: 'Los Angeles', country: 'US', lat: 34.0522, lon: -118.2437 },
+    { name: 'Chicago', country: 'US', lat: 41.8781, lon: -87.6298 },
+    { name: 'Houston', country: 'US', lat: 29.7604, lon: -95.3698 },
+    { name: 'Miami', country: 'US', lat: 25.7617, lon: -80.1918 },
+    { name: 'San Francisco', country: 'US', lat: 37.7749, lon: -122.4194 },
+    { name: 'Toronto', country: 'CA', lat: 43.6532, lon: -79.3832 },
+    { name: 'Vancouver', country: 'CA', lat: 49.2827, lon: -123.1207 },
+    { name: 'São Paulo', country: 'BR', lat: -23.5505, lon: -46.6333 },
+    { name: 'Rio de Janeiro', country: 'BR', lat: -22.9068, lon: -43.1729 },
+    { name: 'Mexico City', country: 'MX', lat: 19.4326, lon: -99.1332 },
+    { name: 'Buenos Aires', country: 'AR', lat: -34.6037, lon: -58.3816 },
+    { name: 'Lima', country: 'PE', lat: -12.0464, lon: -77.0428 },
+    { name: 'Bogotá', country: 'CO', lat: 4.7110, lon: -74.0721 },
+    { name: 'Santiago', country: 'CL', lat: -33.4489, lon: -70.6693 },
+    { name: 'Havana', country: 'CU', lat: 23.1136, lon: -82.3666 },
+    { name: 'Washington DC', country: 'US', lat: 38.9072, lon: -77.0369 },
+    { name: 'Atlanta', country: 'US', lat: 33.7490, lon: -84.3880 },
+    { name: 'Denver', country: 'US', lat: 39.7392, lon: -104.9903 },
+    { name: 'Seattle', country: 'US', lat: 47.6062, lon: -122.3321 },
+    // Africa (15)
+    { name: 'Cairo', country: 'EG', lat: 30.0444, lon: 31.2357 },
+    { name: 'Lagos', country: 'NG', lat: 6.5244, lon: 3.3792 },
+    { name: 'Nairobi', country: 'KE', lat: -1.2921, lon: 36.8219 },
+    { name: 'Johannesburg', country: 'ZA', lat: -26.2041, lon: 28.0473 },
+    { name: 'Cape Town', country: 'ZA', lat: -33.9249, lon: 18.4241 },
+    { name: 'Casablanca', country: 'MA', lat: 33.5731, lon: -7.5898 },
+    { name: 'Addis Ababa', country: 'ET', lat: 9.0250, lon: 38.7469 },
+    { name: 'Accra', country: 'GH', lat: 5.6037, lon: -0.1870 },
+    { name: 'Dar es Salaam', country: 'TZ', lat: -6.7924, lon: 39.2083 },
+    { name: 'Kinshasa', country: 'CD', lat: -4.4419, lon: 15.2663 },
+    { name: 'Dakar', country: 'SN', lat: 14.7167, lon: -17.4677 },
+    { name: 'Algiers', country: 'DZ', lat: 36.7538, lon: 3.0588 },
+    { name: 'Tunis', country: 'TN', lat: 36.8065, lon: 10.1815 },
+    { name: 'Luanda', country: 'AO', lat: -8.8399, lon: 13.2894 },
+    { name: 'Khartoum', country: 'SD', lat: 15.5007, lon: 32.5599 },
+    // Oceania (5)
+    { name: 'Sydney', country: 'AU', lat: -33.8688, lon: 151.2093 },
+    { name: 'Melbourne', country: 'AU', lat: -37.8136, lon: 144.9631 },
+    { name: 'Auckland', country: 'NZ', lat: -36.8485, lon: 174.7633 },
+    { name: 'Perth', country: 'AU', lat: -31.9505, lon: 115.8605 },
+    { name: 'Brisbane', country: 'AU', lat: -27.4698, lon: 153.0251 },
+  ], []);
 
-  // Dummy chart data for "Smog Tracking (24h)"
-  const chartData = [
-    { time: '00:00', value: 20 },
-    { time: '04:00', value: 25 },
-    { time: '08:00', value: 45 },
-    { time: '12:00', value: 70 },
-    { time: '14:00', value: 42 },
-    { time: '16:00', value: 35 },
-    { time: '20:00', value: 25 },
-    { time: '23:59', value: 20 },
-  ];
+  // Coastal + Ocean Grid for Wave heat map (40 points)
+  const OCEAN_GRID = useMemo(() => [
+    // Coastal cities
+    { name: 'Miami Coast', country: 'US', lat: 25.76, lon: -80.19 },
+    { name: 'Lisbon Coast', country: 'PT', lat: 38.72, lon: -9.14 },
+    { name: 'Cape Town Coast', country: 'ZA', lat: -33.92, lon: 18.42 },
+    { name: 'Tokyo Bay', country: 'JP', lat: 35.44, lon: 139.84 },
+    { name: 'Sydney Coast', country: 'AU', lat: -33.87, lon: 151.21 },
+    { name: 'LA Coast', country: 'US', lat: 33.94, lon: -118.41 },
+    { name: 'Mumbai Coast', country: 'IN', lat: 19.08, lon: 72.88 },
+    { name: 'Rio Coast', country: 'BR', lat: -22.91, lon: -43.17 },
+    { name: 'Honolulu', country: 'US', lat: 21.31, lon: -157.86 },
+    { name: 'Singapore Strait', country: 'SG', lat: 1.35, lon: 103.82 },
+    { name: 'Reykjavik', country: 'IS', lat: 64.15, lon: -21.94 },
+    // North Atlantic grid
+    { name: 'N. Atlantic 1', country: '', lat: 45, lon: -30 },
+    { name: 'N. Atlantic 2', country: '', lat: 35, lon: -45 },
+    { name: 'N. Atlantic 3', country: '', lat: 55, lon: -20 },
+    { name: 'N. Atlantic 4', country: '', lat: 25, lon: -60 },
+    // South Atlantic
+    { name: 'S. Atlantic 1', country: '', lat: -15, lon: -20 },
+    { name: 'S. Atlantic 2', country: '', lat: -30, lon: -10 },
+    { name: 'S. Atlantic 3', country: '', lat: -5, lon: -30 },
+    // North Pacific
+    { name: 'N. Pacific 1', country: '', lat: 35, lon: -160 },
+    { name: 'N. Pacific 2', country: '', lat: 45, lon: -140 },
+    { name: 'N. Pacific 3', country: '', lat: 25, lon: 170 },
+    { name: 'N. Pacific 4', country: '', lat: 15, lon: -130 },
+    // South Pacific
+    { name: 'S. Pacific 1', country: '', lat: -20, lon: -150 },
+    { name: 'S. Pacific 2', country: '', lat: -35, lon: -120 },
+    { name: 'S. Pacific 3', country: '', lat: -10, lon: 170 },
+    // Indian Ocean
+    { name: 'Indian Ocean 1', country: '', lat: -5, lon: 70 },
+    { name: 'Indian Ocean 2', country: '', lat: -20, lon: 60 },
+    { name: 'Indian Ocean 3', country: '', lat: 5, lon: 85 },
+    { name: 'Indian Ocean 4', country: '', lat: -30, lon: 45 },
+    // Mediterranean
+    { name: 'Med Sea 1', country: '', lat: 36, lon: 15 },
+    { name: 'Med Sea 2', country: '', lat: 34, lon: 25 },
+    // Caribbean
+    { name: 'Caribbean 1', country: '', lat: 18, lon: -70 },
+    { name: 'Caribbean 2', country: '', lat: 15, lon: -80 },
+    // Southern Ocean
+    { name: 'Southern Ocean 1', country: '', lat: -50, lon: 30 },
+    { name: 'Southern Ocean 2', country: '', lat: -55, lon: -60 },
+    // Arctic
+    { name: 'Norwegian Sea', country: '', lat: 65, lon: 5 },
+    { name: 'Barents Sea', country: '', lat: 72, lon: 30 },
+    // Bay of Bengal / South China Sea
+    { name: 'Bay of Bengal', country: '', lat: 12, lon: 87 },
+    { name: 'South China Sea', country: '', lat: 15, lon: 115 },
+    { name: 'Gulf of Mexico', country: '', lat: 25, lon: -90 },
+  ], []);
+
+  // Fetch layer data
+  useEffect(() => {
+    async function fetchLayerData() {
+      if (layerCache[mapLayer]) {
+        setMapMarkers(layerCache[mapLayer]);
+        return;
+      }
+      setLayerLoading(true);
+      try {
+        let markers = [];
+
+        // Helper to batch fetch in groups to avoid overwhelming
+        const batchFetch = async (items, batchSize, fetchFn) => {
+          const results = [];
+          for (let i = 0; i < items.length; i += batchSize) {
+            const batch = items.slice(i, i + batchSize);
+            const batchResults = await Promise.all(batch.map(fetchFn));
+            results.push(...batchResults);
+          }
+          return results;
+        };
+
+        if (mapLayer === 'air') {
+          markers = await batchFetch(GLOBAL_CITIES, 20, async (c) => {
+            const r = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${c.lat}&longitude=${c.lon}&current=european_aqi,pm2_5,pm10`);
+            const d = await r.json();
+            const aqi = d.current?.european_aqi || 0;
+            let color = '#13ec92';
+            if (aqi > 80) color = '#ef4444';
+            else if (aqi > 40) color = '#facc15';
+            return { ...c, value: aqi, label: `AQI ${aqi}`, unit: 'AQI', detail: `PM2.5: ${d.current?.pm2_5?.toFixed(1) || 0} µg/m³`, color };
+          });
+        } else if (mapLayer === 'waves') {
+          markers = await batchFetch(OCEAN_GRID, 15, async (c) => {
+            const r = await fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${c.lat}&longitude=${c.lon}&current=wave_height,wave_period,wave_direction`);
+            const d = await r.json();
+            const wh = d.current?.wave_height || 0;
+            let color = '#13ec92';
+            if (wh > 3) color = '#ef4444';
+            else if (wh > 1.5) color = '#facc15';
+            else if (wh > 0.8) color = '#4ade80';
+            return { ...c, value: wh, label: `${wh.toFixed(1)}m`, unit: 'm', detail: `Period: ${d.current?.wave_period?.toFixed(1) || 0}s`, color, radius: Math.max(wh * 120000, 150000) };
+          });
+        } else if (mapLayer === 'storms') {
+          markers = await batchFetch(GLOBAL_CITIES, 20, async (c) => {
+            const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&current=wind_speed_10m,wind_gusts_10m,weather_code`);
+            const d = await r.json();
+            const gusts = d.current?.wind_gusts_10m || 0;
+            const wCode = d.current?.weather_code || 0;
+            let color = '#13ec92';
+            if (gusts > 60 || wCode >= 95) color = '#ef4444';
+            else if (gusts > 30 || wCode >= 61) color = '#facc15';
+            const wDesc = wCode >= 95 ? 'Thunderstorm' : wCode >= 71 ? 'Snow' : wCode >= 61 ? 'Rain' : wCode >= 51 ? 'Drizzle' : wCode >= 45 ? 'Fog' : wCode >= 3 ? 'Cloudy' : 'Clear';
+            return { ...c, value: gusts, label: `${gusts.toFixed(0)} km/h`, unit: 'km/h', detail: `${wDesc} • Wind: ${d.current?.wind_speed_10m?.toFixed(0) || 0} km/h`, color, radius: Math.max(gusts * 8000, 100000) };
+          });
+        } else if (mapLayer === 'hotspots') {
+          const airResults = await batchFetch(GLOBAL_CITIES.slice(0, 30), 15, async (c) => {
+            const r = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${c.lat}&longitude=${c.lon}&current=european_aqi,pm2_5`);
+            const d = await r.json();
+            return { ...c, aqi: d.current?.european_aqi || 0, pm25: d.current?.pm2_5 || 0 };
+          });
+          const stormResults = await batchFetch(GLOBAL_CITIES.slice(0, 30), 15, async (c) => {
+            const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&current=wind_gusts_10m,weather_code`);
+            const d = await r.json();
+            return { ...c, gusts: d.current?.wind_gusts_10m || 0, wCode: d.current?.weather_code || 0 };
+          });
+          const combined = airResults.map((a, i) => {
+            const s = stormResults[i];
+            const risk = a.aqi + (s.gusts > 40 ? 50 : 0) + (s.wCode >= 61 ? 30 : 0);
+            let color = '#13ec92';
+            if (risk > 100) color = '#ef4444';
+            else if (risk > 50) color = '#facc15';
+            const cat = a.aqi > 80 ? 'Air Quality Alert' : s.gusts > 40 ? 'High Wind' : s.wCode >= 61 ? 'Weather Alert' : 'Moderate';
+            return { ...a, value: risk, label: `Risk ${risk}`, unit: '', detail: `AQI: ${a.aqi} • Gusts: ${s.gusts.toFixed(0)} km/h`, color, category: cat };
+          });
+          combined.sort((a, b) => b.value - a.value);
+          markers = combined;
+        }
+        setMapMarkers(markers);
+        setLayerCache(prev => ({ ...prev, [mapLayer]: markers }));
+      } catch (e) {
+        console.error('Layer fetch error', e);
+      } finally {
+        setLayerLoading(false);
+      }
+    }
+    fetchLayerData();
+  }, [mapLayer, GLOBAL_CITIES, OCEAN_GRID, layerCache]);
+
+  // Auto-detect nearest station via geolocation
+  useEffect(() => {
+    if (selectedStation) return; // already set
+    const fallback = { name: 'Bangkok', country: 'TH', lat: 13.7563, lon: 100.5018 };
+    const haversine = (lat1, lon1, lat2, lon2) => {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    };
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          let nearest = GLOBAL_CITIES[0], minDist = Infinity;
+          GLOBAL_CITIES.forEach(c => {
+            const d = haversine(latitude, longitude, c.lat, c.lon);
+            if (d < minDist) { minDist = d; nearest = c; }
+          });
+          setSelectedStation(nearest);
+        },
+        () => setSelectedStation(fallback),
+        { timeout: 5000 }
+      );
+    } else {
+      setSelectedStation(fallback);
+    }
+  }, [GLOBAL_CITIES, selectedStation]);
+
+  // Fetch detailed data for selected station
+  useEffect(() => {
+    async function fetchStationData() {
+      try {
+        setLoading(true);
+        const res = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${selectedStation.lat}&longitude=${selectedStation.lon}&current=european_aqi,pm10,pm2_5,ozone,nitrogen_dioxide&hourly=pm10,pm2_5,ozone,nitrogen_dioxide,european_aqi`);
+        const data = await res.json();
+        setStationData(data);
+        setAirData({ paris: data }); // backward compat for chart
+      } catch (e) {
+        console.error("Station data fetch error", e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (!selectedStation) return;
+    fetchStationData();
+  }, [selectedStation]);
+
+  // Trend Chart Data
+  const chartData = useMemo(() => {
+    if (!stationData?.hourly) return [];
+    const hourly = stationData.hourly;
+    const nowIdx = hourly.time.findIndex(t => new Date(t).getHours() === new Date().getHours() && new Date(t).getDate() === new Date().getDate());
+    const startIdx = Math.max(0, (nowIdx !== -1 ? nowIdx : 23) - 23);
+    const times = hourly.time.slice(startIdx, startIdx + 24);
+    let key = 'pm2_5';
+    if (smogTab === 'PM10') key = 'pm10';
+    if (smogTab === 'NO2') key = 'nitrogen_dioxide';
+    const values = hourly[key].slice(startIdx, startIdx + 24);
+    return times.map((t, i) => {
+      const d = new Date(t);
+      return { time: `${d.getHours().toString().padStart(2, '0')}:00`, value: Math.round(values[i] || 0) };
+    });
+  }, [stationData, smogTab]);
+
+  // Main Variables from selected station
+  const currentAQI = stationData?.current?.european_aqi || 42;
+  const currentPm25 = stationData?.current?.pm2_5 || 12.4;
+  const currentPm10 = stationData?.current?.pm10 || 24.8;
+  const currentO3 = stationData?.current?.ozone || 45.2;
+  const currentNo2 = stationData?.current?.nitrogen_dioxide || 18.1;
+
+  let aqiStatus = 'Good';
+  let aqiColor = '#13ec92';
+  if (currentAQI > 80) { aqiStatus = 'Poor'; aqiColor = '#ef4444'; }
+  else if (currentAQI > 40) { aqiStatus = 'Moderate'; aqiColor = '#facc15'; }
+
+  // Use map markers for hotspots display
+  const displayHotspots = useMemo(() => {
+    if (mapLayer === 'air' && mapMarkers.length > 0) {
+      return [...mapMarkers].sort((a, b) => b.value - a.value).map((m, i) => ({
+        rank: String(i + 1).padStart(2, '0'), city: `${m.name}, ${m.country}`, category: m.value > 80 ? 'High Pollution' : m.value > 40 ? 'Moderate' : 'Good', aqi: m.value, color: m.color, lat: m.lat, lon: m.lon, name: m.name, country: m.country
+      }));
+    }
+    if (mapLayer === 'waves' && mapMarkers.length > 0) {
+      return [...mapMarkers].sort((a, b) => b.value - a.value).map((m, i) => ({
+        rank: String(i + 1).padStart(2, '0'), city: `${m.name}, ${m.country}`, category: m.value > 3 ? 'Heavy Seas' : m.value > 1.5 ? 'Moderate' : 'Calm', aqi: m.value, color: m.color, lat: m.lat, lon: m.lon, name: m.name, country: m.country, unit: 'm'
+      }));
+    }
+    if (mapLayer === 'storms' && mapMarkers.length > 0) {
+      return [...mapMarkers].sort((a, b) => b.value - a.value).map((m, i) => ({
+        rank: String(i + 1).padStart(2, '0'), city: `${m.name}, ${m.country}`, category: m.value > 60 ? 'Severe' : m.value > 30 ? 'Strong' : 'Moderate', aqi: m.value, color: m.color, lat: m.lat, lon: m.lon, name: m.name, country: m.country, unit: 'km/h'
+      }));
+    }
+    if (mapLayer === 'hotspots' && mapMarkers.length > 0) {
+      return mapMarkers.slice(0, 8).map((m, i) => ({
+        rank: String(i + 1).padStart(2, '0'), city: `${m.name}, ${m.country}`, category: m.category || 'Alert', aqi: m.value, color: m.color, lat: m.lat, lon: m.lon, name: m.name, country: m.country
+      }));
+    }
+    return [{ rank: '01', city: 'Loading...', category: 'Fetching data', aqi: 0, color: '#13ec92' }];
+  }, [mapMarkers, mapLayer]);
+
+  // Layer config
+  const LAYER_CONFIG = {
+    air: { icon: '🌬️', label: 'Air Quality', title: 'Global Index Map', subtitle: `Real-time AQI from ${GLOBAL_CITIES.length} cities worldwide` },
+    waves: { icon: '🌊', label: 'Wave Height', title: 'Ocean Wave Monitor', subtitle: `Live wave heights at ${OCEAN_GRID.length} stations` },
+    storms: { icon: '⛈️', label: 'Storms & Wind', title: 'Storm & Wind Tracker', subtitle: 'Wind gusts and weather conditions globally' },
+    hotspots: { icon: '🔥', label: 'Hotspots', title: 'Global Risk Hotspots', subtitle: 'Combined air quality + weather risk index' },
+  };
+
+  const currentLayerConfig = LAYER_CONFIG[mapLayer];
+
+  // Notifications based on live data
+  const notifications = useMemo(() => {
+    const notifs = [];
+    const stName = selectedStation?.name || 'Station';
+    if (currentAQI > 80) notifs.push({ type: 'alert', msg: `⚠️ ${stName} AQI is ${currentAQI} — Poor air quality`, time: 'Now' });
+    if (currentAQI > 40) notifs.push({ type: 'warning', msg: `Air quality moderate at ${stName}`, time: '1m ago' });
+    const highHotspots = mapMarkers.filter(m => m.value > 80);
+    if (highHotspots.length > 0) notifs.push({ type: 'alert', msg: `${highHotspots.length} cities with high pollution detected`, time: '5m ago' });
+    notifs.push({ type: 'info', msg: `${mapMarkers.length} stations actively monitored`, time: '10m ago' });
+    notifs.push({ type: 'info', msg: 'Data refreshed from Open-Meteo API', time: '15m ago' });
+    return notifs;
+  }, [currentAQI, selectedStation, mapMarkers]);
+
+  if (!selectedStation) {
+    return (
+      <div className="bg-[#051c14] min-h-screen font-['Space_Grotesk'] text-slate-100 flex items-center justify-center" style={{ background: '#051c14' }}>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-[#13ec92]/30 border-t-[#13ec92] rounded-full animate-spin"></div>
+          <p className="text-[#13ec92] font-bold animate-pulse">Detecting nearest station...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-[#051c14] min-h-screen font-['Space_Grotesk'] text-slate-100 p-4 md:p-6 lg:p-8">
+    <div className="bg-[#051c14] min-h-screen font-['Space_Grotesk'] text-slate-100 p-4 md:p-6 lg:p-8" style={{ background: '#051c14' }}>
       {/* HEADER */}
       <header className="flex flex-wrap items-center justify-between border-b border-[#13ec92]/20 pb-4 mb-6 gap-4">
         <div className="flex items-center gap-4">
@@ -1952,252 +2410,489 @@ function CamsDashboard() {
           </nav>
         </div>
 
-        <div className="flex items-center gap-4">
-          <button className="relative text-slate-300 hover:text-white">
+        <div className="flex items-center gap-4 relative">
+          <button onClick={() => setShowNotifications(!showNotifications)} className="relative text-slate-300 hover:text-white transition-colors">
             <Bell className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#13ec92] rounded-full"></span>
+            {notifications.some(n => n.type === 'alert') && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#ef4444] rounded-full animate-pulse border border-[#051c14]"></span>}
           </button>
-          <div className="w-9 h-9 rounded-full bg-slate-700 overflow-hidden border-2 border-[#13ec92]/50">
-            <img src="https://i.pravatar.cc/100?img=33" alt="User" className="w-full h-full object-cover" />
-          </div>
+          {showNotifications && (
+            <div className="absolute top-10 right-0 w-80 bg-[#0a2319] border border-[#13ec92]/20 rounded-xl shadow-2xl z-50 overflow-hidden">
+              <div className="px-4 py-3 border-b border-[#13ec92]/10 flex justify-between items-center">
+                <span className="text-white font-bold text-sm">Notifications</span>
+                <span className="text-[10px] text-[#13ec92] font-bold">{notifications.length} alerts</span>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                {notifications.map((n, i) => (
+                  <div key={i} className="px-4 py-3 border-b border-[#13ec92]/5 hover:bg-[#051c14] transition-colors cursor-pointer">
+                    <div className="flex justify-between items-start gap-2">
+                      <p className={`text-xs font-medium ${n.type === 'alert' ? 'text-[#ef4444]' : n.type === 'warning' ? 'text-[#facc15]' : 'text-slate-300'}`}>{n.msg}</p>
+                      <span className="text-[9px] text-slate-500 whitespace-nowrap">{n.time}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
-      {/* MAIN GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* DYNAMIC CONTENT AREA BASED ON TABS */}
+      {activeTab === 'Overview' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
 
-        {/* LEFT COLUMN (Map + Chart) */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
+          {/* LEFT COLUMN (Map + Chart) */}
+          <div className="lg:col-span-2 flex flex-col gap-6">
 
-          {/* MAP SECTION */}
-          <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-5 flex flex-col relative overflow-hidden h-[450px]">
-            <div className="flex justify-between items-start mb-4 relative z-10 w-full">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-[#13ec92]/10 rounded-lg"><Sun className="w-5 h-5 text-[#13ec92]" /></div>
-                <div>
-                  <h2 className="text-white font-bold text-base">European Air Quality Monitor</h2>
-                  <p className="text-[#13ec92] text-xs">Real-time PM2.5 & PM10 visualization</p>
+            {/* MAP SECTION */}
+            <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-5 flex flex-col relative overflow-hidden" style={{ height: '550px' }}>
+              {/* Title + Layer Selector */}
+              <div className="flex flex-wrap justify-between items-start mb-3 relative z-10 w-full gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-[#13ec92]/10 rounded-lg"><Globe className="w-5 h-5 text-[#13ec92]" /></div>
+                  <div>
+                    <h2 className="text-white font-bold text-base">{currentLayerConfig.title}</h2>
+                    <p className="text-[#13ec92] text-xs">{currentLayerConfig.subtitle}</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(LAYER_CONFIG).map(([key, cfg]) => (
+                    <button
+                      key={key}
+                      onClick={() => setMapLayer(key)}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${mapLayer === key ? 'bg-[#13ec92] text-[#051c14] shadow-[0_0_15px_rgba(19,236,146,0.4)]' : 'bg-[#051c14] text-slate-300 border border-[#13ec92]/20 hover:border-[#13ec92]/50 hover:text-white'}`}
+                    >
+                      <span>{cfg.icon}</span> {cfg.label}
+                    </button>
+                  ))}
                 </div>
               </div>
-              <div className="flex gap-3">
-                <div className="relative">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#13ec92]/50" />
-                  <input type="text" placeholder="Search city or region..." className="bg-[#051c14] border border-[#13ec92]/20 rounded-lg py-2 pl-9 pr-4 text-sm text-white focus:outline-none focus:border-[#13ec92]/50 w-48 transition-all xl:w-64" />
+
+              {/* Weather tile overlay selector (needs OWM API key) */}
+              {OWM_API_KEY && (
+                <div className="flex flex-wrap gap-1.5 mb-2 relative z-10 items-center">
+                  <div className="flex items-center gap-1 mr-1">
+                    <span className="text-[9px] text-slate-500 font-bold uppercase self-center">Overlay:</span>
+                    <span className="bg-[#13ec92] text-[#051c14] text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full animate-pulse">NEW</span>
+                    <span className="text-[#13ec92] text-sm animate-bounce">↓</span>
+                  </div>
+                  {[{ k: 'none', l: 'None' }, { k: 'temp_new', l: '🌡️ Temp' }, { k: 'wind_new', l: '💨 Wind' }, { k: 'precipitation_new', l: '🌧️ Precip' }, { k: 'clouds_new', l: '☁️ Clouds' }].map(o => (
+                    <button key={o.k} onClick={() => setWeatherTileLayer(o.k)} className={`px-2 py-1 text-[10px] font-bold rounded-md transition-all ${weatherTileLayer === o.k ? 'bg-[#13ec92]/20 text-[#13ec92] border border-[#13ec92]/40 shadow-[0_0_10px_rgba(19,236,146,0.3)]' : 'bg-[#051c14]/50 text-slate-400 border border-transparent hover:text-white hover:border-[#13ec92]/20'}`}>{o.l}</button>
+                  ))}
                 </div>
-                <button className="bg-[#13ec92] hover:bg-[#10c87a] text-[#051c14] px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors">
-                  <Download className="w-4 h-4" /> Export
-                </button>
+              )}
+              {/* Real Leaflet World Map */}
+              <div className="flex-1 w-full rounded-xl overflow-hidden relative border border-[#13ec92]/10">
+                {layerLoading && (
+                  <div className="absolute inset-0 bg-[#051c14]/80 backdrop-blur-sm z-[1000] flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-10 h-10 border-4 border-[#13ec92]/30 border-t-[#13ec92] rounded-full animate-spin"></div>
+                      <span className="text-[#13ec92] text-sm font-bold animate-pulse">Loading {currentLayerConfig.label} data...</span>
+                    </div>
+                  </div>
+                )}
+                <MapContainer center={[20, 0]} zoom={2} minZoom={2} maxZoom={8} className="w-full h-full" style={{ background: '#051c14' }} zoomControl={false} attributionControl={false}>
+                  <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                  {OWM_API_KEY && weatherTileLayer !== 'none' && (
+                    <TileLayer url={`https://tile.openweathermap.org/map/${weatherTileLayer}/{z}/{x}/{y}.png?appid=${OWM_API_KEY}`} opacity={0.6} />
+                  )}
+                  {mapMarkers.map((m, i) => (
+                    (mapLayer === 'waves' || mapLayer === 'storms') ? (
+                      <Circle
+                        key={`${mapLayer}-circle-${i}`}
+                        center={[m.lat, m.lon]}
+                        radius={m.radius || 200000}
+                        pathOptions={{ fillColor: m.color, fillOpacity: 0.35, color: m.color, weight: 1, opacity: 0.5 }}
+                      >
+                        <Popup>
+                          <div style={{ background: '#0a2319', padding: '12px', borderRadius: '10px', border: '1px solid rgba(19,236,146,0.3)', minWidth: '180px' }}>
+                            <div style={{ color: '#13ec92', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '1px' }}>{currentLayerConfig.label}</div>
+                            <div style={{ color: '#fff', fontSize: '14px', fontWeight: 800, marginBottom: '2px' }}>{m.name}{m.country ? `, ${m.country}` : ''}</div>
+                            <div style={{ color: m.color, fontSize: '20px', fontWeight: 900, marginBottom: '4px' }}>{m.label}</div>
+                            <div style={{ color: '#94a3b8', fontSize: '11px' }}>{m.detail}</div>
+                          </div>
+                        </Popup>
+                      </Circle>
+                    ) : (
+                      <Marker
+                        key={`${mapLayer}-${i}`}
+                        position={[m.lat, m.lon]}
+                        icon={L.divIcon({
+                          className: 'custom-marker',
+                          html: `<div style="width:${selectedStation.name === m.name ? '20' : '14'}px;height:${selectedStation.name === m.name ? '20' : '14'}px;border-radius:50%;background:${m.color};border:2px solid ${selectedStation.name === m.name ? '#13ec92' : 'white'};box-shadow:0 0 ${selectedStation.name === m.name ? '20' : '10'}px ${m.color}"></div>`,
+                          iconSize: [selectedStation.name === m.name ? 20 : 14, selectedStation.name === m.name ? 20 : 14],
+                          iconAnchor: [selectedStation.name === m.name ? 10 : 7, selectedStation.name === m.name ? 10 : 7]
+                        })}
+                        eventHandlers={{ click: () => setSelectedStation({ name: m.name, country: m.country, lat: m.lat, lon: m.lon }) }}
+                      >
+                        <Popup>
+                          <div style={{ background: '#0a2319', padding: '12px', borderRadius: '10px', border: '1px solid rgba(19,236,146,0.3)', minWidth: '180px' }}>
+                            <div style={{ color: '#13ec92', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '1px' }}>📍 Click to select as primary station</div>
+                            <div style={{ color: '#fff', fontSize: '14px', fontWeight: 800, marginBottom: '2px' }}>{m.name}, {m.country}</div>
+                            <div style={{ color: m.color, fontSize: '20px', fontWeight: 900, marginBottom: '4px' }}>{m.label}</div>
+                            <div style={{ color: '#94a3b8', fontSize: '11px' }}>{m.detail}</div>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    )
+                  ))}
+                </MapContainer>
+
+                {/* Legend overlay */}
+                <div className="absolute bottom-3 left-3 bg-[#051c14]/90 backdrop-blur-md rounded-lg border border-[#13ec92]/20 p-3 w-44 z-[500]">
+                  <span className="text-[10px] font-bold text-white uppercase tracking-wider mb-2 block">{currentLayerConfig.label} Intensity</span>
+                  <div className="h-2 w-full bg-gradient-to-r from-[#13ec92] via-[#facc15] to-[#ef4444] rounded-full mb-1"></div>
+                  <div className="flex justify-between text-[9px] text-slate-400 font-bold uppercase">
+                    <span>Low</span><span>Med</span><span>High</span>
+                  </div>
+                </div>
+
+                {/* Marker count badge */}
+                <div className="absolute top-3 right-3 bg-[#051c14]/90 backdrop-blur-md rounded-lg border border-[#13ec92]/20 px-3 py-2 z-[500]">
+                  <span className="text-[10px] font-bold text-[#13ec92]">{mapMarkers.length} stations</span>
+                </div>
               </div>
             </div>
 
-            {/* Fake Map Visualization */}
-            <div className="flex-1 w-full bg-gradient-to-br from-[#103024] to-[#0a2319] rounded-xl relative overflow-hidden border border-[#13ec92]/5">
-              {/* Map Lines */}
-              <svg className="absolute inset-0 w-full h-full opacity-20" xmlns="http://www.w3.org/2000/svg">
-                <line x1="20%" y1="0" x2="60%" y2="100%" stroke="#13ec92" strokeWidth="1" strokeDasharray="5,5" />
-                <line x1="0" y1="30%" x2="100%" y2="10%" stroke="#13ec92" strokeWidth="1" strokeDasharray="5,5" />
-                <line x1="80%" y1="0" x2="90%" y2="100%" stroke="#13ec92" strokeWidth="1" strokeDasharray="5,5" />
-              </svg>
-
-              {/* Markers */}
-              {/* Paris */}
-              <div className="absolute top-[40%] left-[25%] flex flex-col items-center group cursor-pointer transition-transform hover:scale-110">
-                <div className="w-4 h-4 rounded-full bg-[#13ec92] border-2 border-white shadow-[0_0_15px_rgba(19,236,146,0.8)] relative z-10 animate-pulse"></div>
-                <div className="mt-2 bg-[#051c14]/80 backdrop-blur-sm border border-[#13ec92]/20 px-3 py-1 rounded-md text-xs font-bold text-white shadow-lg opacity-80 group-hover:opacity-100 transition-opacity">Paris: 42 AQI</div>
-              </div>
-
-              {/* Berlin */}
-              <div className="absolute top-[60%] left-[45%] flex flex-col items-center group cursor-pointer transition-transform hover:scale-110">
-                <div className="w-4 h-4 rounded-full bg-[#facc15] border-2 border-white shadow-[0_0_15px_rgba(250,204,21,0.8)] relative z-10 animate-pulse"></div>
-                <div className="mt-2 bg-[#051c14]/80 backdrop-blur-sm border border-[#13ec92]/20 px-3 py-1 rounded-md text-xs font-bold text-white shadow-lg opacity-80 group-hover:opacity-100 transition-opacity">Berlin: 85 AQI</div>
-              </div>
-
-              {/* Blank dot */}
-              <div className="absolute top-[65%] left-[65%] flex flex-col items-center">
-                <div className="w-3 h-3 rounded-full bg-[#13ec92] border-2 border-[#13ec92]/30 shadow-[0_0_10px_rgba(19,236,146,0.5)] relative z-10"></div>
-              </div>
-
-              {/* City text on map */}
-              <span className="absolute top-[10%] left-[15%] text-xs font-bold text-[#13ec92]/20 -rotate-45">Travemünde</span>
-
-              {/* Zoom Buttons */}
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-2">
-                <button className="w-8 h-8 bg-[#051c14]/80 backdrop-blur-sm border border-[#13ec92]/20 rounded-lg flex items-center justify-center text-white hover:bg-[#13ec92] hover:text-[#051c14] transition-colors"><Plus className="w-4 h-4" /></button>
-                <button className="w-8 h-8 bg-[#051c14]/80 backdrop-blur-sm border border-[#13ec92]/20 rounded-lg flex items-center justify-center text-white hover:bg-[#13ec92] hover:text-[#051c14] transition-colors"><Minus className="w-4 h-4" /></button>
-                <button className="w-8 h-8 bg-[#051c14]/80 backdrop-blur-sm border border-[#13ec92]/20 rounded-lg flex items-center justify-center text-white hover:bg-[#13ec92] hover:text-[#051c14] transition-colors mt-2"><Layers className="w-4 h-4" /></button>
-              </div>
-
-              {/* Legend */}
-              <div className="absolute bottom-4 left-4 bg-[#051c14]/80 backdrop-blur-md rounded-lg border border-[#13ec92]/20 p-3 w-48">
-                <span className="text-[10px] font-bold text-white uppercase tracking-wider mb-2 block">Pollution Intensity</span>
-                <div className="h-2 w-full bg-gradient-to-r from-[#13ec92] via-[#facc15] to-[#ef4444] rounded-full mb-1"></div>
-                <div className="flex justify-between text-[9px] text-slate-400 font-bold uppercase">
-                  <span>Low</span><span>Med</span><span>High</span>
+            {/* SMOG TRACKING CHART */}
+            <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-5 flex flex-col h-[300px]">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-white font-bold text-base">Air Quality (24h) — {selectedStation.name}, {selectedStation.country}</h2>
+                  <p className="text-[#13ec92] text-xs">Live station data ({smogTab})</p>
                 </div>
+                <div className="flex bg-[#051c14] rounded-lg p-1 border border-[#13ec92]/20">
+                  {['PM2.5', 'PM10', 'NO2'].map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setSmogTab(t)}
+                      className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${smogTab === t ? 'bg-[#13ec92]/10 text-[#13ec92]' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex-1 w-full relative">
+                {loading ? (
+                  <div className="w-full h-full flex items-center justify-center text-[#13ec92] animate-pulse">Loading Historical Data...</div>
+                ) : (
+                  <>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorSmog" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#13ec92" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="#13ec92" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#4ade80', fontSize: 10, fontWeight: 700 }} dy={10} />
+                        <YAxis axisLine={false} tickLine={false} tick={false} />
+                        <CartesianGrid strokeDasharray="5 5" stroke="#13ec92" opacity={0.1} vertical={false} />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: '#051c14', borderColor: '#13ec92', borderRadius: '8px' }}
+                          itemStyle={{ color: '#13ec92', fontWeight: 'bold' }}
+                          labelStyle={{ color: '#fff', fontWeight: 700 }}
+                          formatter={(val) => [`${val} ${smogTab === 'PM2.5' ? 'µg/m³' : smogTab === 'PM10' ? 'µg/m³' : 'µg/m³'}`, smogTab]}
+                        />
+                        <Area type="monotone" dataKey="value" stroke="#13ec92" strokeWidth={3} fillOpacity={1} fill="url(#colorSmog)" />
+                        {(() => {
+                          const nowHr = new Date().getHours().toString().padStart(2, '0') + ':00';
+                          const nowVal = chartData.find(d => d.time === nowHr)?.value;
+                          return nowVal != null ? (
+                            <ReferenceDot x={nowHr} y={nowVal} r={6} fill="#051c14" stroke="#13ec92" strokeWidth={2} isFront>
+                              <label value={`${smogTab} ${nowVal}`} position="top" fill="#13ec92" fontSize={10} fontWeight={700} offset={12} />
+                            </ReferenceDot>
+                          ) : null;
+                        })()}
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </>
+                )}
               </div>
             </div>
           </div>
 
-          {/* SMOG TRACKING CHART */}
-          <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-5 flex flex-col h-[300px]">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h2 className="text-white font-bold text-base">Smog Tracking (24h)</h2>
-                <p className="text-[#13ec92] text-xs">Regional average across monitored stations</p>
+          {/* RIGHT COLUMN */}
+          <div className="flex flex-col gap-6">
+
+            {/* STATION PICKER */}
+            <div className="relative">
+              <button
+                onClick={() => setShowStationPicker(!showStationPicker)}
+                className="w-full bg-[#0a2319] rounded-xl border border-[#13ec92]/20 p-3 flex items-center justify-between hover:border-[#13ec92]/50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-[#13ec92]" />
+                  <span className="text-white font-bold text-sm">{selectedStation.name}, {selectedStation.country}</span>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-[#13ec92] transition-transform ${showStationPicker ? 'rotate-180' : ''}`} />
+              </button>
+              {showStationPicker && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-[#0a2319] border border-[#13ec92]/20 rounded-xl shadow-2xl z-50 overflow-hidden">
+                  <div className="p-2 border-b border-[#13ec92]/10">
+                    <input
+                      type="text"
+                      value={stationSearch}
+                      onChange={(e) => setStationSearch(e.target.value)}
+                      placeholder="Search city..."
+                      className="w-full bg-[#051c14] border border-[#13ec92]/20 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 outline-none focus:border-[#13ec92]/50"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="max-h-48 overflow-y-auto">
+                    {GLOBAL_CITIES.filter(c => c.name.toLowerCase().includes(stationSearch.toLowerCase()) || c.country.toLowerCase().includes(stationSearch.toLowerCase())).map((c, i) => (
+                      <button
+                        key={i}
+                        onClick={() => { setSelectedStation(c); setShowStationPicker(false); setStationSearch(''); }}
+                        className={`w-full px-3 py-2 text-left text-sm flex justify-between items-center hover:bg-[#051c14] transition-colors ${selectedStation.name === c.name ? 'bg-[#13ec92]/10 text-[#13ec92]' : 'text-slate-300'}`}
+                      >
+                        <span className="font-medium">{c.name}</span>
+                        <span className="text-[10px] text-slate-500">{c.country}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* CURRENT AQI */}
+            <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92] p-5 relative overflow-hidden shadow-[0_4px_30px_rgba(19,236,146,0.1)]">
+              <Leaf className="absolute -right-4 top-10 w-48 h-48 text-[#13ec92]/5 -rotate-12 pointer-events-none" />
+
+              <div className="flex items-center gap-2 text-[#13ec92] font-bold text-xs uppercase tracking-widest mb-4">
+                <Sun className="w-4 h-4" /> {selectedStation.name} AQI
               </div>
-              <div className="flex bg-[#051c14] rounded-lg p-1 border border-[#13ec92]/20">
-                {['PM2.5', 'PM10', 'NO2'].map(t => (
-                  <button
-                    key={t}
-                    onClick={() => setSmogTab(t)}
-                    className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${smogTab === t ? 'bg-[#13ec92]/10 text-[#13ec92]' : 'text-slate-400 hover:text-white'}`}
-                  >
-                    {t}
-                  </button>
+
+              <div className="flex items-baseline gap-2 mb-3">
+                <span className="text-6xl font-black text-white">{currentAQI}</span>
+                <span className="text-xl font-bold" style={{ color: aqiColor }}>{aqiStatus}</span>
+              </div>
+
+              <div className="text-[10px] text-slate-400 mb-4 px-2 py-1.5 bg-[#051c14] rounded-lg border border-[#13ec92]/10">📍 <span className="text-white font-bold">{selectedStation.name}, {selectedStation.country}</span> — Click any marker to switch</div>
+
+              <div className="flex justify-between items-end border-t border-[#13ec92]/20 pt-4">
+                <div>
+                  <span className="text-xs text-[#13ec92] block mb-1">Smog Level</span>
+                  <span className="text-lg font-bold text-white">{currentAQI > 80 ? 'High' : currentAQI > 40 ? 'Medium' : 'Low'}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs text-[#13ec92] block mb-1">Trend (1h)</span>
+                  <span className="text-sm font-bold text-[#ef4444] flex items-center gap-1 justify-end">
+                    <TrendingUp className="w-4 h-4" /> +2.4%
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* POLLUTANT GRID */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-[#0a2319] rounded-xl border border-[#13ec92]/10 p-4 hover:border-[#13ec92]/40 transition-colors">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-xs font-bold text-[#13ec92] uppercase">PM 2.5</span>
+                  <CloudRain className="w-3 h-3 text-slate-500" />
+                </div>
+                <div className="text-2xl font-black text-white mb-1">{currentPm25.toFixed(1)}</div>
+                <div className="text-[10px] text-[#13ec92]/60">µg/m³</div>
+              </div>
+              <div className="bg-[#0a2319] rounded-xl border border-[#13ec92]/10 p-4 hover:border-[#13ec92]/40 transition-colors">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-xs font-bold text-[#13ec92] uppercase">PM 10</span>
+                  <CloudRain className="w-3 h-3 text-slate-500" />
+                </div>
+                <div className="text-2xl font-black text-white mb-1">{currentPm10.toFixed(1)}</div>
+                <div className="text-[10px] text-[#13ec92]/60">µg/m³</div>
+              </div>
+              <div className="bg-[#0a2319] rounded-xl border border-[#13ec92]/10 p-4 hover:border-[#13ec92]/40 transition-colors">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-xs font-bold text-[#13ec92] uppercase">O3</span>
+                  <Wind className="w-3 h-3 text-slate-500" />
+                </div>
+                <div className="text-2xl font-black text-white mb-1">{currentO3.toFixed(1)}</div>
+                <div className="text-[10px] text-[#13ec92]/60">µg/m³</div>
+              </div>
+              <div className="bg-[#0a2319] rounded-xl border border-[#13ec92]/10 p-4 hover:border-[#13ec92]/40 transition-colors">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-xs font-bold text-[#13ec92] uppercase">NO2</span>
+                  <Thermometer className="w-3 h-3 text-slate-500" />
+                </div>
+                <div className="text-2xl font-black text-white mb-1">{currentNo2.toFixed(1)}</div>
+                <div className="text-[10px] text-[#13ec92]/60">µg/m³</div>
+              </div>
+            </div>
+
+            {/* HOTSPOTS */}
+            <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-5 flex flex-col flex-grow">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-white font-bold text-sm">Global {mapLayer === 'hotspots' ? 'Risk' : currentLayerConfig.label} Hotspots</h2>
+                <button onClick={() => setShowAllHotspots(v => !v)} className="text-[#13ec92] text-xs font-bold hover:underline">{showAllHotspots ? 'Show Less' : `View All (${displayHotspots.length})`}</button>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {(showAllHotspots ? displayHotspots : displayHotspots.slice(0, 8)).map((spot, i) => (
+                  <div key={i} onClick={() => spot.lat && setSelectedStation({ name: spot.name || spot.city.split(',')[0], country: spot.country || spot.city.split(',')[1]?.trim(), lat: spot.lat, lon: spot.lon })} className="flex items-center justify-between p-3 bg-[#051c14] rounded-xl border border-[#13ec92]/5 hover:border-[#13ec92]/30 transition-colors cursor-pointer group">
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] font-bold text-[#13ec92]/50">{spot.rank}</span>
+                      <div>
+                        <div className="text-sm font-bold text-white">{spot.city}</div>
+                        <div className="text-[10px] text-[#13ec92]">{spot.category}</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-black" style={{ color: spot.color }}>{mapLayer === 'waves' ? `${spot.aqi.toFixed(1)} m` : mapLayer === 'storms' ? `${Math.round(spot.aqi)} km/h` : `${spot.aqi} AQI`}</span>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
 
-            <div className="flex-1 w-full relative">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorSmog" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#13ec92" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#13ec92" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#4ade80', fontSize: 10, fontWeight: 700 }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={false} />
-                  <CartesianGrid strokeDasharray="5 5" stroke="#13ec92" opacity={0.1} vertical={false} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#051c14', borderColor: '#13ec92', borderRadius: '8px' }}
-                    itemStyle={{ color: '#13ec92', fontWeight: 'bold' }}
-                    labelStyle={{ color: '#fff' }}
-                  />
-                  <Area type="monotone" dataKey="value" stroke="#13ec92" strokeWidth={3} fillOpacity={1} fill="url(#colorSmog)" />
-                </AreaChart>
-              </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
-              {/* Floating Value Point */}
-              <div className="absolute left-[50%] top-[40%] flex flex-col items-center">
-                <div className="bg-[#051c14] border border-[#13ec92] px-2 py-1 rounded-md text-center mb-2 shadow-[0_0_15px_rgba(19,236,146,0.3)]">
-                  <div className="text-[10px] font-bold text-white">14:00</div>
-                  <div className="text-[10px] font-bold text-[#13ec92]">AQI 42</div>
-                </div>
-                <div className="w-3 h-3 rounded-full bg-[#051c14] border-2 border-[#13ec92] relative z-10 shadow-[0_0_10px_rgba(19,236,146,0.8)]"></div>
+      {/* ANALYSIS TAB */}
+      {activeTab === 'Analysis' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+          <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-6">
+            <h2 className="text-white font-bold text-lg mb-4 flex items-center gap-2"><BarChart3 className="w-5 h-5 text-[#13ec92]" /> Pollutant Comparison</h2>
+            <p className="text-slate-400 text-sm mb-6">Current levels vs WHO guidelines for {selectedStation.name} station</p>
+            <div className="space-y-4">
+              {[
+                { label: 'PM2.5', current: currentPm25, limit: 15, unit: 'µg/m³' },
+                { label: 'PM10', current: currentPm10, limit: 45, unit: 'µg/m³' },
+                { label: 'O3', current: currentO3, limit: 100, unit: 'µg/m³' },
+                { label: 'NO2', current: currentNo2, limit: 25, unit: 'µg/m³' }
+              ].map((p) => {
+                const pct = Math.min((p.current / p.limit) * 100, 100);
+                const barColor = pct > 80 ? '#ef4444' : pct > 50 ? '#facc15' : '#13ec92';
+                return (
+                  <div key={p.label}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-white font-bold">{p.label}</span>
+                      <span className="text-slate-400">{p.current.toFixed(1)} / {p.limit} {p.unit}</span>
+                    </div>
+                    <div className="h-3 bg-[#051c14] rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: barColor }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-6">
+            <h2 className="text-white font-bold text-lg mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-[#13ec92]" /> Insights</h2>
+            <div className="space-y-4">
+              <div className="bg-[#051c14] rounded-xl p-4 border border-[#13ec92]/10">
+                <div className="text-[#13ec92] text-xs font-bold uppercase mb-2">Air Quality Rating</div>
+                <div className="text-3xl font-black text-white mb-1">{aqiStatus}</div>
+                <p className="text-slate-400 text-sm">European AQI index value: {currentAQI}</p>
+              </div>
+              <div className="bg-[#051c14] rounded-xl p-4 border border-[#13ec92]/10">
+                <div className="text-[#13ec92] text-xs font-bold uppercase mb-2">Key Pollutant</div>
+                <div className="text-lg font-bold text-white mb-1">{currentPm25 > currentNo2 ? 'PM2.5' : 'NO2'} is dominant</div>
+                <p className="text-slate-400 text-sm">Value: {Math.max(currentPm25, currentNo2).toFixed(1)} µg/m³</p>
+              </div>
+              <div className="bg-[#051c14] rounded-xl p-4 border border-[#13ec92]/10">
+                <div className="text-[#13ec92] text-xs font-bold uppercase mb-2">Hotspot Alert</div>
+                <div className="text-lg font-bold text-white mb-1">{displayHotspots[0]?.city || 'N/A'}</div>
+                <p className="text-slate-400 text-sm">Highest AQI: {displayHotspots[0]?.aqi || 0}</p>
               </div>
             </div>
           </div>
         </div>
+      )}
 
-        {/* RIGHT COLUMN */}
-        <div className="flex flex-col gap-6">
-
-          {/* CURRENT AQI */}
-          <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92] p-5 relative overflow-hidden shadow-[0_4px_30px_rgba(19,236,146,0.1)]">
-            {/* Background icon */}
-            <Leaf className="absolute -right-4 top-10 w-48 h-48 text-[#13ec92]/5 -rotate-12 pointer-events-none" />
-
-            <div className="flex items-center gap-2 text-[#13ec92] font-bold text-xs uppercase tracking-widest mb-4">
-              <Sun className="w-4 h-4" /> CURRENT AQI
-            </div>
-
-            <div className="flex items-baseline gap-2 mb-8">
-              <span className="text-6xl font-black text-white">85</span>
-              <span className="text-xl font-bold text-[#facc15]">Moderate</span>
-            </div>
-
-            <div className="flex justify-between items-end border-t border-[#13ec92]/20 pt-4">
-              <div>
-                <span className="text-xs text-[#13ec92] block mb-1">Smog Level</span>
-                <span className="text-lg font-bold text-white">Medium</span>
-              </div>
-              <div className="text-right">
-                <span className="text-xs text-[#13ec92] block mb-1">Trend (1h)</span>
-                <span className="text-sm font-bold text-[#ef4444] flex items-center gap-1 justify-end">
-                  <TrendingUp className="w-4 h-4" /> +2.4%
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* POLLUTANT GRID */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-[#0a2319] rounded-xl border border-[#13ec92]/10 p-4 hover:border-[#13ec92]/40 transition-colors">
-              <div className="flex justify-between items-start mb-2">
-                <span className="text-xs font-bold text-[#13ec92] uppercase">PM 2.5</span>
-                <CloudRain className="w-3 h-3 text-slate-500" />
-              </div>
-              <div className="text-2xl font-black text-white mb-1">12.4</div>
-              <div className="text-[10px] text-[#13ec92]/60">µg/m³</div>
-            </div>
-            <div className="bg-[#0a2319] rounded-xl border border-[#13ec92]/10 p-4 hover:border-[#13ec92]/40 transition-colors">
-              <div className="flex justify-between items-start mb-2">
-                <span className="text-xs font-bold text-[#13ec92] uppercase">PM 10</span>
-                <CloudRain className="w-3 h-3 text-slate-500" />
-              </div>
-              <div className="text-2xl font-black text-white mb-1">24.8</div>
-              <div className="text-[10px] text-[#13ec92]/60">µg/m³</div>
-            </div>
-            <div className="bg-[#0a2319] rounded-xl border border-[#13ec92]/10 p-4 hover:border-[#13ec92]/40 transition-colors">
-              <div className="flex justify-between items-start mb-2">
-                <span className="text-xs font-bold text-[#13ec92] uppercase">O3</span>
-                <Wind className="w-3 h-3 text-slate-500" />
-              </div>
-              <div className="text-2xl font-black text-white mb-1">45.2</div>
-              <div className="text-[10px] text-[#13ec92]/60">µg/m³</div>
-            </div>
-            <div className="bg-[#0a2319] rounded-xl border border-[#13ec92]/10 p-4 hover:border-[#13ec92]/40 transition-colors">
-              <div className="flex justify-between items-start mb-2">
-                <span className="text-xs font-bold text-[#13ec92] uppercase">NO2</span>
-                <Thermometer className="w-3 h-3 text-slate-500" />
-              </div>
-              <div className="text-2xl font-black text-white mb-1">18.1</div>
-              <div className="text-[10px] text-[#13ec92]/60">µg/m³</div>
-            </div>
-          </div>
-
-          {/* HOTSPOTS */}
-          <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-5 flex flex-col flex-grow">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-white font-bold text-sm">Pollution Hotspots</h2>
-              <button className="text-[#13ec92] text-xs font-bold hover:underline">View All</button>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              {hotspots.map((spot, i) => (
-                <div key={i} className="flex items-center justify-between p-3 bg-[#051c14] rounded-xl border border-[#13ec92]/5 hover:border-[#13ec92]/20 transition-colors">
+      {/* REPORTS TAB */}
+      {activeTab === 'Reports' && (
+        <div className="animate-fade-in">
+          <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-6 mb-6">
+            <h2 className="text-white font-bold text-lg mb-2 flex items-center gap-2"><FileText className="w-5 h-5 text-[#13ec92]" /> Latest Reports</h2>
+            <p className="text-slate-400 text-sm mb-6">Generated from live API data</p>
+            <div className="space-y-3">
+              {[
+                { title: 'European Air Quality Summary', date: new Date().toLocaleDateString(), type: 'PDF' },
+                { title: `Paris Station Report – AQI ${currentAQI}`, date: new Date().toLocaleDateString(), type: 'CSV' },
+                { title: 'Hotspot Analysis – Top 5 Cities', date: new Date().toLocaleDateString(), type: 'PDF' },
+                { title: 'PM2.5 / PM10 Trend Report (24h)', date: new Date().toLocaleDateString(), type: 'CSV' }
+              ].map((r, i) => (
+                <div key={i} className="flex items-center justify-between p-4 bg-[#051c14] rounded-xl border border-[#13ec92]/10 hover:border-[#13ec92]/30 transition-colors">
                   <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-bold text-[#13ec92]/50">{spot.rank}</span>
+                    <div className="p-2 bg-[#13ec92]/10 rounded-lg"><FileText className="w-4 h-4 text-[#13ec92]" /></div>
                     <div>
-                      <div className="text-sm font-bold text-white">{spot.city}</div>
-                      <div className="text-[10px] text-[#13ec92]">{spot.category}</div>
+                      <div className="text-sm font-bold text-white">{r.title}</div>
+                      <div className="text-[10px] text-slate-400">{r.date} • {r.type}</div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-sm font-black" style={{ color: spot.color }}>{spot.aqi} AQI</span>
-                  </div>
+                  <button className="text-[#13ec92] hover:text-white text-xs font-bold flex items-center gap-1 transition-colors">
+                    <Download className="w-3 h-3" /> Download
+                  </button>
                 </div>
               ))}
             </div>
           </div>
-
         </div>
-      </div>
+      )}
 
       {/* FOOTER */}
       <footer className="mt-8 pt-4 border-t border-[#13ec92]/20 flex justify-between items-center text-xs font-medium">
         <div className="flex items-center gap-2 text-[#13ec92]">
           <div className="w-2 h-2 rounded-full bg-[#13ec92] animate-pulse"></div>
-          System Operational <span className="text-[#13ec92]/50 ml-2">Last Updated: 14:02 UTC</span>
+          System Operational <span className="text-[#13ec92]/50 ml-2">Last Updated: {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' })} GMT+7</span>
         </div>
-        <div className="flex gap-4 text-[#13ec92]/70">
-          <a href="#" className="hover:text-[#13ec92]">Privacy Policy</a>
-          <a href="#" className="hover:text-[#13ec92]">Data Sources</a>
-          <a href="#" className="hover:text-[#13ec92]">Copernicus API</a>
+        <div className="flex gap-4 text-[#13ec92]/70 relative">
+          <button onClick={() => setShowCredits(!showCredits)} className="hover:text-[#13ec92] flex items-center gap-1 transition-colors">
+            <Info className="w-3 h-3" /> Data Sources & Credits
+          </button>
+          {showCredits && (
+            <div className="absolute bottom-full right-0 mb-2 w-80 bg-[#0a2319] border border-[#13ec92]/30 rounded-xl shadow-2xl z-50 p-4">
+              <h3 className="text-[#13ec92] font-bold text-sm mb-3 flex items-center gap-2"><Globe className="w-4 h-4" /> Data Sources</h3>
+              <div className="space-y-2 text-[11px]">
+                <div className="flex items-start gap-2 p-2 bg-[#051c14] rounded-lg">
+                  <span className="text-[#13ec92] font-bold min-w-[60px]">AQI Data</span>
+                  <span className="text-slate-400">Open-Meteo Air Quality API (European AQI, PM2.5, PM10, O₃, NO₂)</span>
+                </div>
+                <div className="flex items-start gap-2 p-2 bg-[#051c14] rounded-lg">
+                  <span className="text-[#13ec92] font-bold min-w-[60px]">Waves</span>
+                  <span className="text-slate-400">Open-Meteo Marine API (wave height, wave period)</span>
+                </div>
+                <div className="flex items-start gap-2 p-2 bg-[#051c14] rounded-lg">
+                  <span className="text-[#13ec92] font-bold min-w-[60px]">Weather</span>
+                  <span className="text-slate-400">Open-Meteo Forecast API (wind, gusts, weather codes)</span>
+                </div>
+                <div className="flex items-start gap-2 p-2 bg-[#051c14] rounded-lg">
+                  <span className="text-[#13ec92] font-bold min-w-[60px]">Tiles</span>
+                  <span className="text-slate-400">OpenWeatherMap (temp, wind, precipitation, clouds overlays)</span>
+                </div>
+                <div className="flex items-start gap-2 p-2 bg-[#051c14] rounded-lg">
+                  <span className="text-[#13ec92] font-bold min-w-[60px]">Map</span>
+                  <span className="text-slate-400">CartoDB Dark Matter tiles via Leaflet</span>
+                </div>
+                <div className="flex items-start gap-2 p-2 bg-[#051c14] rounded-lg">
+                  <span className="text-[#13ec92] font-bold min-w-[60px]">Service</span>
+                  <span className="text-slate-400">Copernicus Atmosphere Monitoring Service (CAMS)</span>
+                </div>
+              </div>
+              <div className="mt-3 pt-2 border-t border-[#13ec92]/10 text-[10px] text-slate-500">
+                All data is retrieved in real-time from public APIs. No data is stored.
+              </div>
+            </div>
+          )}
         </div>
       </footer>
+
+      {/* DEVELOPER CREDIT */}
+      <div className="mt-4 pt-4 border-t border-[#13ec92]/10 flex flex-col md:flex-row justify-between items-center gap-3 text-[10px]">
+        <div className="flex items-center gap-2">
+          <span className="text-[#13ec92] font-black uppercase tracking-widest">Developed by</span>
+          <span className="text-white font-bold">Tichakorn Rojsiraphisal</span>
+        </div>
+        <div className="flex items-center gap-4 text-slate-500 font-semibold">
+          <a href="https://instagram.com/dxwntichakn" target="_blank" rel="noreferrer" className="hover:text-pink-500 transition-colors flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-pink-500"></span>@dxwntichakn</a>
+          <a href="https://github.com/tidawnroj" target="_blank" rel="noreferrer" className="hover:text-white transition-colors flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-white"></span>@tidawnroj</a>
+          <span className="text-slate-600">© {new Date().getFullYear()} TMD Data</span>
+        </div>
+      </div>
     </div>
   );
 }
