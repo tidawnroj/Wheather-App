@@ -42,7 +42,8 @@ import {
   Settings,
   Zap,
   Lock,
-  Waves
+  Waves,
+  Menu
 } from 'lucide-react'
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, ReferenceDot
@@ -809,6 +810,7 @@ function App() {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
   const [isDarkMode, setIsDarkMode] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   // States for Tabs and Features
   const [activeScreen, setActiveScreen] = useState('dashboard') // dashboard, national, history, compare
@@ -1197,10 +1199,13 @@ function App() {
                 )}
               </div>
 
-              {/* Mobile Menu Dropdown Toggle (Visual Only) */}
+              {/* Mobile Menu Dropdown Toggle */}
               <div className="lg:hidden flex gap-2">
-                <button className={`p-2 rounded-lg text-xs font-bold ${activeScreen === 'national' ? 'bg-blue-500 text-white' : 'bg-black/5 dark:bg-white/5'}`} onClick={() => setActiveScreen('national')}><LayoutGrid className="w-4 h-4" /></button>
-                <button className={`p-2 rounded-lg text-xs font-bold ${activeScreen === 'history' ? 'bg-blue-500 text-white' : 'bg-black/5 dark:bg-white/5'}`} onClick={() => setActiveScreen('history')}><History className="w-4 h-4" /></button>
+                <button className={`p-2 rounded-lg text-xs font-bold ${activeScreen === 'national' ? 'bg-blue-500 text-white' : 'bg-black/5 dark:bg-white/5'}`} onClick={() => { setActiveScreen('national'); setMobileMenuOpen(false); }}><LayoutGrid className="w-4 h-4" /></button>
+                <button className={`p-2 rounded-lg text-xs font-bold ${activeScreen === 'history' ? 'bg-blue-500 text-white' : 'bg-black/5 dark:bg-white/5'}`} onClick={() => { setActiveScreen('history'); setMobileMenuOpen(false); }}><History className="w-4 h-4" /></button>
+                <button className="p-2 rounded-lg bg-black/5 dark:bg-white/5 text-slate-700 dark:text-slate-300" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+                  {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+                </button>
               </div>
 
               <button
@@ -1211,6 +1216,28 @@ function App() {
                 {isDarkMode ? <Moon className="w-5 h-5 text-slate-300" /> : <Sun className="w-5 h-5 text-slate-600" />}
               </button>
             </div>
+
+            {/* Mobile Dropdown Menu */}
+            {mobileMenuOpen && (
+              <div className="absolute top-[100%] left-0 w-full bg-white/95 dark:bg-[#050505]/95 backdrop-blur-3xl border-b border-slate-200 dark:border-white/5 shadow-2xl lg:hidden flex flex-col p-6 gap-5 z-40 origin-top animate-fade-in">
+                <button className={`text-left text-lg font-black flex items-center gap-3 ${activeScreen === 'dashboard' ? 'text-blue-500' : 'text-slate-700 dark:text-slate-300'}`} onClick={() => { setActiveScreen('dashboard'); setMobileMenuOpen(false); }}><Cloud className="w-5 h-5" /> Live Dashboard</button>
+                <button className={`text-left text-lg font-black flex items-center gap-3 ${activeScreen === 'national' ? 'text-blue-500' : 'text-slate-700 dark:text-slate-300'}`} onClick={() => { setActiveScreen('national'); setMobileMenuOpen(false); }}><LayoutGrid className="w-5 h-5" /> National Grid</button>
+                <button className={`text-left text-lg font-black flex items-center gap-3 ${activeScreen === 'history' ? 'text-blue-500' : 'text-slate-700 dark:text-slate-300'}`} onClick={() => { setActiveScreen('history'); setMobileMenuOpen(false); }}><History className="w-5 h-5" /> Historical Data</button>
+                <button className={`text-left text-lg font-black flex items-center gap-3 ${activeScreen === 'compare' ? 'text-blue-500' : 'text-slate-700 dark:text-slate-300'}`} onClick={() => { setActiveScreen('compare'); setMobileMenuOpen(false); }}>
+                  <BarChart3 className="w-5 h-5" /> Compare {compareList.length > 0 && <span className="bg-blue-500 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center">{compareList.length}</span>}
+                </button>
+                <button className={`text-left text-lg font-black flex items-center gap-3 ${activeScreen === 'alerts' ? 'text-red-500' : 'text-slate-700 dark:text-slate-300'}`} onClick={() => { setActiveScreen('alerts'); setMobileMenuOpen(false); }}>
+                  <Bell className="w-5 h-5" /> Alerts
+                  {weatherAlerts.length > 0 && <span className="bg-red-500 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center animate-pulse">{weatherAlerts.length}</span>}
+                </button>
+
+                <div className="h-px w-full bg-slate-200 dark:bg-white/10 my-2"></div>
+
+                <Link to="/copernicus" onClick={() => setMobileMenuOpen(false)} className="py-4 rounded-xl font-black text-[#0a1c12] text-center flex justify-center items-center gap-2 shadow-[0_0_20px_rgba(19,236,146,0.3)]" style={{ background: 'linear-gradient(135deg, #13ec92 0%, #a3f76e 100%)' }}>
+                  <Globe className="w-5 h-5" /> Copernicus Space Hub
+                </Link>
+              </div>
+            )}
           </nav>
         )}
 
