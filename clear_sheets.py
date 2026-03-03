@@ -21,7 +21,9 @@ def clear_all_tabs():
     print(f"Found {len(worksheets)} tabs to process.")
     
     # Google Sheets must have at least one tab. We'll create a temporary one to avoid errors when deleting others.
-    temp_sheet = spreadsheet.add_worksheet(title="TEMP_CLEANING", rows="1", cols="1")
+    import time
+    temp_name = f"TEMP_{int(time.time())}"
+    temp_sheet = spreadsheet.add_worksheet(title=temp_name, rows="1", cols="1")
     
     for ws in worksheets:
         try:

@@ -63,7 +63,7 @@ L.Icon.Default.mergeOptions({
 import { findNearestStation, STATION_COORDINATES } from './utils/geo'
 import './index.css'
 
-const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJXklPJR4YW55WZxQnfoPqjWK6dpXwWA4sBmAHVeGHXStzjk0UCdZNs002Vow_9T_-xn4P02-JFl8T/pub?gid=130093209&single=true&output=csv'
+const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJXklPJR4YW55WZxQnfoPqjWK6dpXwWA4sBmAHVeGHXStzjk0UCdZNs002Vow_9T_-xn4P02-JFl8T/pub?gid=1977620023&single=true&output=csv'
 
 function MapClickHandler({ setLocation }) {
   useMapEvents({
