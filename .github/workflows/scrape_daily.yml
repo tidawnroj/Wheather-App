@@ -29,6 +29,48 @@ jobs:
       run: |
         mkdir -p credentials
         echo '${{ secrets.GCP_CREDENTIALS }}' > credentials/credentials.json
-        
-    - name: Run Scraper Script
+
+    - name: Run TMD Weather Scraper
       run: python scrape_tmd_to_sheets.py
+
+  # ── Monthly Copernicus Ocean Data Fetch ────────────────────────────────────
+  fetch-copernicus-ocean:
+    runs-on: ubuntu-latest
+    # Run on the 1st of every month at 02:00 UTC (09:00 Thailand time)
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && contains(github.event.schedule, '0 2 1'))
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Set up Google Credentials
+      run: |
+        mkdir -p credentials
+        echo '${{ secrets.GCP_CREDENTIALS }}' > credentials/credentials.json
+
+    - name: Fetch Copernicus Ocean Anomalies & Compute SCSI
+      env:
+        COPERNICUS_USERNAME: ${{ secrets.COPERNICUS_USERNAME }}
+        COPERNICUS_PASSWORD: ${{ secrets.COPERNICUS_PASSWORD }}
+        SHEET_OWNER_EMAIL:   ${{ secrets.SHEET_OWNER_EMAIL }}
+      run: python fetch_ocean_anomalies.py
+
+    - name: Commit updated CSV and metadata
+      run: |
+        git config --global user.name  "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git add tmd-weather-app/public/ocean_anomalies_history.csv
+        git add tmd-weather-app/public/copernicus_metadata.json
+        git diff --staged --quiet || git commit -m "chore: update Copernicus ocean anomalies & SCSI [skip ci]"
+        git push

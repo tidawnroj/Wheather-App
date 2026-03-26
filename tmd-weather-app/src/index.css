@@ -2,6 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Copernicus Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Manrope:wght@200;300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+/* Copernicus Specific Styles */
+.glass-panel {
+  backdrop-filter: blur(40px);
+  background: rgba(19, 27, 25, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.hero-gradient {
+  background: radial-gradient(circle at 50% -20%, rgba(59, 254, 161, 0.15) 0%, rgba(9, 16, 13, 0) 60%), #09100d;
+}
+
+.glow-accent {
+  text-shadow: 0 0 15px rgba(19, 236, 146, 0.4);
+}
+
+.beveled-edge {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.oscilloscope-grid {
+  background-image: linear-gradient(rgba(59, 254, 161, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 254, 161, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
 :root {
   --glass-bg: rgba(255, 255, 255, 0.4);
   --glass-border: rgba(255, 255, 255, 0.4);
@@ -77,6 +106,20 @@
   .glass-input-wide {
     @apply w-full bg-black/5 dark:bg-white/5 border-none rounded-full py-3 lg:py-4 pl-14 pr-6 apple-glass outline-none focus:ring-2 focus:ring-[var(--accent-blue)] transition-all;
   }
+
+  .glass-card {
+    background: rgba(19, 236, 146, 0.05);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(19, 236, 146, 0.1);
+  }
+
+  .chart-gradient {
+    background: linear-gradient(to bottom, rgba(19, 236, 146, 0.2) 0%, rgba(19, 236, 146, 0) 100%);
+  }
+
+  .neon-glow {
+    box-shadow: 0 0 15px rgba(19, 236, 146, 0.4);
+  }
 }
 
 /* Fluid Background Animation */
@@ -151,4 +194,75 @@
 .animate-border-glow {
   animation: border-glow 3s ease-in-out infinite;
   border: 2px solid rgba(19, 236, 146, 0.3);
+}
+
+/* Liquid Glass sidebar popup animation */
+@keyframes slideInLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-12px) scale(0.96);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* Page enter animation for Copernicus routes */
+@keyframes copernicusPageEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.copernicus-page-enter {
+  animation: copernicusPageEnter 0.5s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+/* Floating hero button glow */
+@keyframes heroGlow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(19, 236, 146, 0.2), 0 0 60px rgba(19, 236, 146, 0.08);
+  }
+
+  50% {
+    box-shadow: 0 0 30px rgba(19, 236, 146, 0.35), 0 0 80px rgba(19, 236, 146, 0.15);
+  }
+}
+
+.animate-hero-glow {
+  animation: heroGlow 3s ease-in-out infinite;
+}
+
+/* Custom Leaflet overrides */
+.custom-region-label {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.custom-popup .leaflet-popup-content-wrapper {
+  background: rgba(5, 28, 20, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.custom-popup .leaflet-popup-tip {
+  background: rgba(5, 28, 20, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: none;
+  border-left: none;
 }
