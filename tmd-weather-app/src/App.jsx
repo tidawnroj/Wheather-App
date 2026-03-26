@@ -25,6 +25,7 @@ import {
   AlertTriangle,
   BarChart3,
   X,
+  Activity,
   Download,
   Database,
   Mail,
@@ -43,13 +44,18 @@ import {
   Zap,
   Lock,
   Waves,
-  Menu
+  Menu,
+  Calculator,
+  Table2,
+  Loader2,
+  Compass,
+  ShieldAlert
 } from 'lucide-react'
 import {
-  BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, ReferenceDot
+  BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, ReferenceDot, ReferenceLine, Cell
 } from 'recharts'
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMapEvents, useMap } from 'react-leaflet'
-import { Routes, Route, Link, useLocation } from 'react-router-dom'
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMapEvents, useMap, Rectangle, ZoomControl, ImageOverlay, Polygon } from 'react-leaflet'
+import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -64,6 +70,891 @@ L.Icon.Default.mergeOptions({
 import { findNearestStation, STATION_COORDINATES } from './utils/geo'
 import './index.css'
 
+// === NEW COMPONENTS FOR COPERNICUS ===
+
+// --- SUBSYSTEM 1: EARTH HEATMAP (SPATIAL ANALYSIS) ---
+function EarthHeatmapView({ overlayType, setOverlayType, activeArea, setActiveArea, isNested = false }) {
+  const content = (
+    <div className="bg-background-dark/50 backdrop-blur-xl rounded-[2.5rem] p-6 md:p-8 border border-primary/10 shadow-2xl relative z-10 w-full max-w-6xl mx-auto">
+      <div className="relative aspect-[16/9] md:aspect-[21/9] rounded-2xl overflow-hidden border border-primary/20 bg-[#020b08] flex items-center justify-center group shadow-inner">
+        <MapContainer
+          center={[15, 100]}
+          zoom={3}
+          minZoom={2}
+          className="w-full h-full z-0"
+          zoomControl={false}
+          maxBounds={[[-90, -180], [90, 180]]}
+          maxBoundsViscosity={1.0}
+        >
+          <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" noWrap={true} bounds={[[-90, -180], [90, 180]]} />
+          <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}" noWrap={true} bounds={[[-90, -180], [90, 180]]} />
+          <ZoomControl position="bottomright" />
+          {overlayType !== 'SCSI' && (
+            <ImageOverlay
+              url={overlayType === 'SSTA' ? "/copernicus_live_heatmap_ssta.png" : "/copernicus_live_heatmap_ssha.png"}
+              bounds={[[-85.0511, -180], [85.0511, 180]]}
+              opacity={0.7}
+              zIndex={10}
+            />
+          )}
+          <Rectangle bounds={[[15, 115], [20, 120.25]]} pathOptions={{ color: '#000000', weight: 4, fillOpacity: 0 }} />
+          <Rectangle bounds={[[5, 49], [14, 105]]} pathOptions={{ color: '#000000', weight: 4, fillOpacity: 0 }} />
+          <Marker position={[17.5, 117.625]} icon={L.divIcon({ className: 'custom-region-label', html: '<div class="text-white font-black text-2xl drop-shadow-md">A</div>' })} />
+          <Marker position={[9.5, 77]} icon={L.divIcon({ className: 'custom-region-label', html: '<div class="text-white font-black text-2xl drop-shadow-md">B</div>' })} />
+        </MapContainer>
+
+        {overlayType === 'SCSI' && (
+          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm p-12 text-center">
+            <div className="size-20 rounded-full bg-primary/20 flex items-center justify-center border border-primary/40 mb-6 animate-pulse">
+              <Activity className="w-10 h-10 text-primary" />
+            </div>
+            <h4 className="text-2xl font-black text-white uppercase tracking-widest mb-2">SCSI Scalar Mode</h4>
+            <p className="text-slate-300 text-sm max-w-md font-medium"> The Southern China Sea Index (SCSI) is a monthly statistical summary and does not possess a direct spatial grid layer. Use the <strong className="text-primary uppercase">Temporal Analytics</strong> section below for historical trend visualization.</p>
+          </div>
+        )}
+
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#051c14] to-transparent pointer-events-none z-10"></div>
+        <div className="absolute bottom-6 left-6 right-6 z-20 pointer-events-none flex items-end justify-between">
+          <div>
+            <h3 className="text-xl font-black text-white drop-shadow-md uppercase tracking-tight">Spatial Distribution (Real-Time)</h3>
+            <p className="text-xs text-slate-300 mt-1 max-w-xl font-medium">Dominant EOF-2 modes for {overlayType === 'SSTA' ? 'Sea Surface Temperature' : 'Sea Level Height'}.</p>
+          </div>
+          <div className="pointer-events-auto flex gap-2 p-1 bg-black/60 backdrop-blur-md rounded-xl border border-white/10">
+            <button onClick={() => setOverlayType('SSHA')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${overlayType === 'SSHA' ? 'bg-[#13ec92] text-black' : 'text-slate-400 hover:text-white'}`}>SSHA</button>
+            <button onClick={() => setOverlayType('SSTA')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${overlayType === 'SSTA' ? 'bg-[#13ec92] text-black' : 'text-slate-400 hover:text-white'}`}>SSTA</button>
+            <button onClick={() => setOverlayType('SCSI')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${overlayType === 'SCSI' ? 'bg-[#13ec92] text-black' : 'text-slate-400 hover:text-white'}`}>SCSI</button>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+        <button onClick={() => setActiveArea('A')} className={`p-4 rounded-2xl border transition-all text-left ${activeArea === 'A' ? 'bg-[#13ec92]/10 border-[#13ec92]/40 ring-1 ring-[#13ec92]/20' : 'bg-black/20 border-white/5 opacity-60 hover:opacity-100'}`}>
+          <h4 className="font-bold flex items-center gap-2 text-white">Region A: South China Sea</h4>
+          <p className="text-[10px] text-slate-400 mt-1">115°E-120.25°E | 15°N-20°N</p>
+        </button>
+        <button onClick={() => setActiveArea('B')} className={`p-4 rounded-2xl border transition-all text-left ${activeArea === 'B' ? 'bg-[#13ec92]/10 border-[#13ec92]/40 ring-1 ring-[#13ec92]/20' : 'bg-black/20 border-white/5 opacity-60 hover:opacity-100'}`}>
+          <h4 className="font-bold flex items-center gap-2 text-white">Region B: Indian Ocean</h4>
+          <p className="text-[10px] text-slate-400 mt-1">49°E-105°E | 5°N-14°N</p>
+        </button>
+      </div>
+    </div>
+  );
+
+  if (isNested) return content;
+
+  return (
+    <div className="flex flex-col min-h-screen bg-[#051c14] text-slate-100 selection:bg-[#13ec92]/30 pt-24">
+      <CopernicusDataHubHeader active="marine" />
+      <main className="flex-1 overflow-y-auto p-12 flex flex-col copernicus-page-enter">
+        <header className="mb-12">
+          <h1 className="text-4xl font-black mb-2 uppercase tracking-tighter">Earth Heat Map</h1>
+          <p className="text-primary/70 font-medium">Empirical Orthogonal Function (EOF-2) Surface Analysis</p>
+        </header>
+        {content}
+        <div className="flex-1" />
+        <CopernicusFooter />
+      </main>
+    </div>
+  );
+}
+
+// --- SUBSYSTEM 2: OCEAN ANOMALIES (TEMPORAL ANALYSIS) ---
+function OceanAnomaliesDashboard({ data, loading, overlayType, activeArea, scsiHistory = [], scsiHistoryLoading = false, isNested = false }) {
+  // Format data for Recharts
+  const chartData = useMemo(() => {
+    if (overlayType === 'SCSI') {
+      return scsiHistory.map(row => ({
+        date: row.Date,
+        value: parseFloat(row.SCSI) || 0
+      }));
+    }
+    return data.map(row => {
+      let value = row[`Area_${activeArea}_${overlayType}`] || 0;
+      if (overlayType === 'SSTA' && value > 100) value = value - 273.15;
+      else if (overlayType === 'SSHA') value = value * 100;
+      return { date: row.date, value: value };
+    });
+  }, [data, scsiHistory, activeArea, overlayType]);
+
+  const content = (
+    <div className="bg-[#0a2319] rounded-[2.5rem] p-8 border border-[#13ec92]/20 shadow-2xl w-full max-w-6xl mx-auto">
+      <header className="mb-8 flex justify-between items-center">
+        <div>
+          <h3 className="text-2xl font-black text-white tracking-tight uppercase tracking-widest">Temporal Analytics (1993 - Present)</h3>
+          <p className="text-slate-400 text-sm mt-1">Long-term variations for <span className="text-cyan-400 font-bold">{overlayType}</span> in <span className="text-[#13ec92] font-bold">Region {activeArea}</span></p>
+        </div>
+      </header>
+
+      <div className="h-[400px] w-full bg-black/20 rounded-3xl p-6 border border-white/5">
+        {loading || scsiHistoryLoading && overlayType === 'SCSI' ? (
+          <div className="h-full flex flex-col items-center justify-center gap-4">
+            <div className="w-10 h-10 border-4 border-[#13ec92]/20 border-t-[#13ec92] rounded-full animate-spin"></div>
+            <p className="text-xs text-[#13ec92] font-black animate-pulse uppercase tracking-[0.3em]">Syncing Copernicus Archive...</p>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData}>
+              <defs>
+                <linearGradient id="oceanGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={overlayType === 'SSTA' ? '#22d3ee' : overlayType === 'SCSI' ? '#13ec92' : '#f59e0b'} stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="#13ec92" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#13ec92" opacity={0.05} vertical={false} />
+              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: "#64748b", fontSize: 10, fontWeight: 700 }} tickFormatter={(val) => val && (val.endsWith("-01") || val.endsWith("-01-01")) ? val.substring(0, 4) : ""} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: "#64748b", fontSize: 10, fontWeight: 700 }} />
+              <Tooltip contentStyle={{ backgroundColor: "#020b08", borderColor: "#13ec92", borderRadius: "12px", border: "1px solid rgba(19,236,146,0.3)" }} labelStyle={{ fontWeight: "black", marginBottom: "4px" }} />
+              <Area type="monotone" dataKey="value" stroke={overlayType === 'SSTA' ? '#22d3ee' : overlayType === 'SCSI' ? '#13ec92' : '#f59e0b'} strokeWidth={3} fillOpacity={1} fill="url(#oceanGradient)" animationDuration={1500} />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+    </div>
+  );
+
+  if (isNested) return content;
+
+  return (
+    <div className="flex flex-col min-h-screen bg-[#051c14] text-slate-100 selection:bg-[#13ec92]/30 pt-24">
+      <CopernicusDataHubHeader active="marine" />
+      <main className="flex-1 overflow-y-auto p-12 flex flex-col copernicus-page-enter">
+        <header className="mb-12">
+          <h1 className="text-4xl font-black mb-2 uppercase tracking-tighter">Oceanic Anomalies</h1>
+          <p className="text-primary/70 font-medium">Historical Time-Series Analysis (CMEMS 1993-2024)</p>
+        </header>
+        {content}
+        <div className="flex-1" />
+        <CopernicusFooter />
+      </main>
+    </div>
+  );
+}
+
+// --- UNIFIED DASHBOARD: COMBINES THE TWO FUNCTIONS ABOVE ---
+function MarineDashboard() {
+  const [overlayType, setOverlayType] = useState('SSHA');
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeArea, setActiveArea] = useState('A');
+  const [lastSync, setLastSync] = useState(null);
+
+  // Data Downloader State
+  const [dlYear, setDlYear] = useState('2024');
+  const [dlMonth, setDlMonth] = useState('01');
+  const [dlArea, setDlArea] = useState('A');
+  const [dlData, setDlData] = useState(null);
+  const [dlLoading, setDlLoading] = useState(false);
+  const [dlError, setDlError] = useState(null);
+
+  // SCSI State
+  const [scsiYear, setScsiYear] = useState('2569'); // 2026 BE
+  const [scsiMonth, setScsiMonth] = useState('02');
+  const [scsiLoading, setScsiLoading] = useState(false);
+  const [scsiStats, setScsiStats] = useState(null);
+  const [scsiHistory, setScsiHistory] = useState([]);
+  const [scsiHistoryLoading, setScsiHistoryLoading] = useState(true);
+
+  useEffect(() => {
+    document.documentElement.classList.add('dark');
+    window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
+    // Fetch real-time sync metadata
+    fetch('/copernicus_metadata.json')
+      .then(res => res.json())
+      .then(meta => {
+        setLastSync(meta.last_ocean_sync || meta.last_heatmap_sync);
+      })
+      .catch(() => setLastSync(null));
+
+    Papa.parse('/ocean_anomalies_history.csv', {
+      download: true,
+      header: true,
+      dynamicTyping: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        if (results.data && results.data.length > 0 && results.data[0].Area_A_SSTA !== undefined) {
+          setData(results.data);
+        }
+        setLoading(false);
+      },
+      error: () => setLoading(false)
+    });
+
+    // Fetch SCSI Summary from Google Sheets
+    Papa.parse('https://docs.google.com/spreadsheets/d/1q6gtAcB10WJ26zfr_6R7MKfCcwx-p8HesliGMOw7UQA/gviz/tq?tqx=out:csv&sheet=SCSI_SUMMARY', {
+      download: true,
+      header: true,
+      dynamicTyping: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        setScsiHistory(results.data);
+        setScsiHistoryLoading(false);
+      },
+      error: () => setScsiHistoryLoading(false)
+    });
+  }, []);
+
+  const fetchSpatialGrid = (year, month, area) => {
+    return new Promise((resolve, reject) => {
+      const sheetName = `${year}-${month}_Area_${area}`;
+      const url = `https://docs.google.com/spreadsheets/d/1q6gtAcB10WJ26zfr_6R7MKfCcwx-p8HesliGMOw7UQA/gviz/tq?tqx=out:csv&sheet=${sheetName}&headers=0`;
+
+      Papa.parse(url, {
+        download: true,
+        header: false,
+        dynamicTyping: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          if (results.data && results.data.length > 1 && results.data[0].length > 1) {
+            resolve(results.data);
+          } else {
+            reject(`Tab '${sheetName}' not found or formatted incorrectly.`);
+          }
+        },
+        error: (error) => {
+          reject(error.message || 'Error fetching data from Google Sheets');
+        }
+      });
+    });
+  };
+
+  const computeGridStats = (matrix) => {
+    let sum = 0;
+    let count = 0;
+    let values = [];
+
+    for (let r = 1; r < matrix.length; r++) {
+      for (let c = 1; c < matrix[r].length; c++) {
+        let val = matrix[r][c];
+        if (val !== null && val !== undefined && val !== '') {
+          let n = parseFloat(val);
+          if (!isNaN(n)) {
+            values.push(n);
+            sum += n;
+            count++;
+          }
+        }
+      }
+    }
+
+    if (count === 0) return { mean: 0, std: 0, count: 0 };
+    let mean = sum / count;
+    let sqSum = values.reduce((s, val) => s + Math.pow(val - mean, 2), 0);
+    let std = Math.sqrt(sqSum / (count - 1));
+    return { mean, std, count };
+  };
+
+  const handleDownloadGrid = () => {
+    setDlLoading(true);
+    setDlError(null);
+    setDlData(null);
+
+    fetchSpatialGrid(dlYear, dlMonth, dlArea)
+      .then(matrix => {
+        setDlData(matrix);
+        setDlLoading(false);
+      })
+      .catch(err => {
+        const year = parseInt(dlYear);
+        if (year < 2026) {
+          setDlError(`Spatial grid for ${dlYear}-${dlMonth} has been archived to save storage. Only pre-calculated results are available in the summary.`);
+        } else {
+          setDlError(`The spatial data for ${dlYear}-${dlMonth} is not yet synchronized or the tab is missing in Google Sheets.`);
+        }
+        setDlLoading(false);
+      });
+  };
+
+  const handleDownloadCSVFile = () => {
+    if (!dlData) return;
+    const csvContent = "data:text/csv;charset=utf-8," + dlData.map(e => e.join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `CMEMS_${dlYear}_${dlMonth}_Area_${dlArea}_Grid.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleCalculateSCSI = () => {
+    setScsiLoading(true);
+    setScsiStats(null);
+
+    const targetDate = `${scsiYear}-${scsiMonth}`;
+
+    // DAB_mean is derived from the historical SSHA data, not specific to the current month's grid.
+    const DAB_mean = data && data.length > 0
+      ? data.reduce((sum, row) => sum + (parseFloat(row.Area_A_SSHA || 0) - parseFloat(row.Area_B_SSHA || 0)), 0) / data.length
+      : 0.125; // Default value if no historical data
+
+    // Case 1: Search in pre-loaded local scsiHistory
+    const summaryMatch = scsiHistory.find(row => row.Date === targetDate);
+
+    if (summaryMatch) {
+      console.log(`SCSI Cache Hit for ${targetDate}`);
+      setScsiStats({
+        XA: parseFloat(summaryMatch.Xa),
+        XB: parseFloat(summaryMatch.Xb),
+        SA: parseFloat(summaryMatch.Sa),
+        SB: parseFloat(summaryMatch.Sb),
+        nA: parseInt(summaryMatch.nA),
+        nB: parseInt(summaryMatch.nB),
+        Sp: parseFloat(summaryMatch.Sp),
+        DAB: parseFloat(summaryMatch.DAB),
+        DAB_mean: DAB_mean,
+        SCSI: parseFloat(summaryMatch.SCSI)
+      });
+      setScsiLoading(false);
+    } else {
+      // Case 2: Deep check - fetch from Sheets (Direct) or fallback to grid processing
+      console.log(`SCSI Cache Miss for ${targetDate}. Attempting direct sheet fetch...`);
+      const summaryUrl = `https://docs.google.com/spreadsheets/d/1q6gtAcB10WJ26zfr_6R7MKfCcwx-p8HesliGMOw7UQA/gviz/tq?tqx=out:csv&sheet=SCSI_SUMMARY`;
+      
+      Papa.parse(summaryUrl, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: (summaryResults) => {
+          const freshMatch = summaryResults.data.find(row => row.Date === targetDate);
+          if (freshMatch) {
+            setScsiStats({
+              XA: parseFloat(freshMatch.Xa),
+              XB: parseFloat(freshMatch.Xb),
+              SA: parseFloat(freshMatch.Sa),
+              SB: parseFloat(freshMatch.Sb),
+              nA: parseInt(freshMatch.nA),
+              nB: parseInt(freshMatch.nB),
+              Sp: parseFloat(freshMatch.Sp),
+              DAB: parseFloat(freshMatch.DAB),
+              DAB_mean: DAB_mean,
+              SCSI: parseFloat(freshMatch.SCSI)
+            });
+            setScsiLoading(false);
+          } else {
+            // Case 3: Ultimate Fallback - fetch Area A and Area B grids manually
+            Promise.all([
+              fetchSpatialGrid(scsiYear, scsiMonth, 'A'),
+              fetchSpatialGrid(scsiYear, scsiMonth, 'B')
+            ])
+              .then(([gridA, gridB]) => {
+                const statsA = computeGridStats(gridA);
+                const statsB = computeGridStats(gridB);
+                const nA = statsA.count;
+                const nB = statsB.count;
+                const SA = statsA.std;
+                const SB = statsB.std;
+                const XA = statsA.mean;
+                const XB = statsB.mean;
+                const Sp2 = ((nA - 1) * Math.pow(SA, 2) + (nB - 1) * Math.pow(SB, 2)) / (nA + nB - 2);
+                const Sp = Math.sqrt(Sp2);
+                const DAB = XA - XB;
+                const scsi = (DAB - DAB_mean) / Sp;
+                setScsiStats({ XA, XB, SA, SB, nA, nB, Sp, DAB, DAB_mean: DAB_mean, SCSI: scsi });
+                setScsiLoading(false);
+              })
+              .catch(err => {
+                console.error(err);
+                alert(`Error: The spatial data for ${targetDate} is not available in the summary tab or archived grids.`);
+                setScsiLoading(false);
+              });
+          }
+        },
+        error: () => setScsiLoading(false)
+      });
+    }
+  };
+
+  const years = Array.from({ length: 32 }, (_, i) => (2024 - i).toString());
+  const months = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
+  const areas = ['A', 'B', 'Thailand Coastal', 'Andaman Deep'];
+
+  return (
+    <div className="min-h-screen hero-gradient font-body text-on-background selection:bg-primary/30 antialiased overflow-x-hidden">
+      <CopernicusDataHubHeader active="marine" />
+
+      {/* Background Grid Layer */}
+      <div className="fixed inset-0 oscilloscope-grid opacity-10 pointer-events-none z-0"></div>
+
+      <main className="relative z-10 pt-32 pb-20 px-6 max-w-7xl mx-auto flex flex-col gap-24">
+
+        {/* Dashboard Header */}
+        <section className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-white/5 pb-12">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary text-[9px] font-black tracking-widest uppercase mb-4">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+              </span>
+              Operational Mode: Aquatic Telemetry
+            </div>
+            <h1 className="font-headline text-5xl md:text-7xl font-black tracking-tighter text-white drop-shadow-2xl italic leading-none">
+              MARINE<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-emerald-400 to-cyan-500 uppercase text-4xl md:text-6xl">Intelligence</span>
+            </h1>
+            <div className="mt-4 flex items-center gap-3">
+              <span className="px-3 py-1 rounded-md bg-white/5 border border-white/10 text-[9px] font-black text-emerald-400 uppercase tracking-widest">Algorithm v4.2 Loaded</span>
+              <span className="px-3 py-1 rounded-md bg-primary/10 border border-primary/20 text-[9px] font-black text-primary uppercase tracking-widest">0.25° Optimized Resolution</span>
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <div className="glass-panel px-6 py-3 rounded-2xl beveled-edge flex items-center gap-4 bg-white/5">
+              <div className="flex flex-col text-right">
+                <span className="text-[9px] font-black text-primary uppercase tracking-[0.2em] leading-none mb-1">Global Sync</span>
+                <span className="text-sm font-headline font-bold text-white uppercase tracking-wider leading-none">
+                  {lastSync ? `NODAL_${lastSync.split(' ')[0].replace(/-/g, '_')}` : 'ESTABLISHING...'}
+                </span>
+              </div>
+              <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                <Activity className="w-5 h-5 text-primary animate-pulse" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 1: Heatmap HUD */}
+        <section>
+          <div className="flex items-center gap-4 mb-10 group">
+            <div className="size-12 rounded-2xl glass-panel beveled-edge flex items-center justify-center text-primary font-headline font-black text-xl group-hover:scale-110 transition-transform">01</div>
+            <div>
+              <h2 className="font-headline text-2xl font-bold text-white tracking-tight uppercase tracking-widest">Spatial Distribution</h2>
+              <p className="text-emerald-100/40 text-[10px] uppercase font-bold tracking-[0.2em]">Live Earth Heatmap Matrix</p>
+            </div>
+          </div>
+
+          <div className="glass-panel rounded-[2.5rem] overflow-hidden beveled-edge shadow-2xl relative">
+            {/* HUD Decoration */}
+            <div className="absolute top-4 left-6 z-20 flex gap-2">
+              <div className="px-2 py-0.5 rounded-sm bg-primary/20 text-primary text-[8px] font-black uppercase tracking-tighter border border-primary/30">SCAN_MODE:ACTV</div>
+              <div className="px-2 py-0.5 rounded-sm bg-white/5 text-white/40 text-[8px] font-black uppercase tracking-tighter border border-white/5">FRM:128ms</div>
+            </div>
+
+            <EarthHeatmapView
+              overlayType={overlayType}
+              setOverlayType={setOverlayType}
+              activeArea={activeArea}
+              setActiveArea={setActiveArea}
+              isNested={true}
+            />
+          </div>
+        </section>
+
+        {/* Section 2: Temporal Telemetry */}
+        <section>
+          <div className="flex items-center gap-4 mb-10 group">
+            <div className="size-12 rounded-2xl glass-panel beveled-edge flex items-center justify-center text-primary font-headline font-black text-xl group-hover:scale-110 transition-transform">02</div>
+            <div>
+              <h2 className="font-headline text-2xl font-bold text-white tracking-tight uppercase tracking-widest">Temporal Analytics</h2>
+              <p className="text-emerald-100/40 text-[10px] uppercase font-bold tracking-[0.2em]">Multi-Decadal Anomaly Tracking</p>
+            </div>
+          </div>
+
+          <div className="glass-panel rounded-[2.5rem] p-8 beveled-edge shadow-2xl bg-gradient-to-br from-white/5 to-transparent">
+            <OceanAnomaliesDashboard
+              data={data}
+              loading={loading}
+              overlayType={overlayType}
+              activeArea={activeArea}
+              scsiHistory={scsiHistory}
+              scsiHistoryLoading={scsiHistoryLoading}
+              isNested={true}
+            />
+          </div>
+        </section>
+
+        {/* Section 3: Data Ingestion Terminal */}
+        <section>
+          <div className="flex items-center gap-4 mb-10 group">
+            <div className="size-12 rounded-2xl glass-panel beveled-edge flex items-center justify-center text-primary font-headline font-black text-xl group-hover:scale-110 transition-transform">03</div>
+            <div>
+              <h2 className="font-headline text-2xl font-bold text-white tracking-tight uppercase tracking-widest">Nodal Data Downloader</h2>
+              <p className="text-emerald-100/40 text-[10px] uppercase font-bold tracking-[0.2em]">Raw CSV Matrix Extraction</p>
+            </div>
+          </div>
+
+          <div className="glass-panel rounded-[2.5rem] p-10 beveled-edge shadow-2xl relative overflow-hidden bg-black/40">
+            <div className="absolute -top-24 -right-24 w-96 h-96 bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 relative z-10 mb-12 items-end">
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] ml-2">Temporal Node (Year)</label>
+                <div className="relative">
+                  <select value={dlYear} onChange={e => setDlYear(e.target.value)} className="w-full bg-white/5 text-white border border-white/10 rounded-2xl px-5 py-4 font-headline font-bold text-sm hover:border-primary/40 transition-all outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer">
+                    {years.map(y => <option key={y} value={y} className="bg-emerald-950 text-white">{y}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary pointer-events-none" />
+                </div>
+              </div>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] ml-2">Temporal Axis (Month)</label>
+                <div className="relative">
+                  <select value={dlMonth} onChange={e => setDlMonth(e.target.value)} className="w-full bg-white/5 text-white border border-white/10 rounded-2xl px-5 py-4 font-headline font-bold text-sm hover:border-primary/40 transition-all outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer">
+                    {months.map(m => <option key={m} value={m} className="bg-emerald-950 text-white">{m}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary pointer-events-none" />
+                </div>
+              </div>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] ml-2">Geospatial Sector</label>
+                <div className="relative">
+                  <select value={dlArea} onChange={e => setDlArea(e.target.value)} className="w-full bg-white/5 text-white border border-white/10 rounded-2xl px-5 py-4 font-headline font-bold text-sm hover:border-primary/40 transition-all outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer">
+                    <option value="A" className="bg-emerald-950 text-white">Area A — South China Sea</option>
+                    <option value="B" className="bg-emerald-950 text-white">Area B — Indian Ocean</option>
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary pointer-events-none" />
+                </div>
+              </div>
+              <button onClick={handleDownloadGrid} disabled={dlLoading} className="w-full h-14 bg-primary text-black font-black rounded-2xl uppercase tracking-widest text-[10px] hover:brightness-110 hover:shadow-[0_0_30px_rgba(59,254,161,0.4)] transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50">
+                {dlLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Database className="w-5 h-5" />}
+                {dlLoading ? 'PROCESSING...' : 'INITIALIZE QUERY'}
+              </button>
+            </div>
+
+            {dlError && (
+              <div className="mb-8 p-6 glass-panel border-red-500/20 bg-red-500/5 text-red-400 rounded-3xl flex items-center gap-4 animate-shake">
+                <AlertTriangle className="size-6 shrink-0" />
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-widest mb-1">System Error</div>
+                  <span className="text-sm font-bold leading-none">{dlError}</span>
+                </div>
+              </div>
+            )}
+
+            {dlData && !dlLoading && (
+              <div className="relative z-10 animate-fade-in glass-panel border-white/10 rounded-3xl overflow-hidden bg-black/60 shadow-inner">
+                <div className="flex justify-between items-center px-8 py-5 border-b border-white/5 bg-white/5 backdrop-blur-md">
+                  <h3 className="text-primary text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-3">
+                    <Table2 className="size-5" /> Ingested Matrix Preview
+                  </h3>
+                  <button onClick={handleDownloadCSVFile} className="px-5 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all hover:scale-105 active:scale-95">
+                    <Download className="size-4" /> Export Telemetry
+                  </button>
+                </div>
+                <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
+                  <table className="w-full text-left text-[11px] text-emerald-100/60 font-mono">
+                    <thead className="bg-black/40 text-primary uppercase font-black tracking-widest">
+                      <tr>
+                        {dlData[0].slice(0, 10).map((th, i) => (
+                          <th key={i} className="px-8 py-4 border-b border-white/5 whitespace-nowrap">{th}{i === 9 ? '...' : ''}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {dlData.slice(1, 6).map((row, rIdx) => (
+                        <tr key={rIdx} className="hover:bg-primary/5 transition-colors">
+                          {row.slice(0, 10).map((cell, cIdx) => (
+                            <td key={cIdx} className="px-8 py-4 whitespace-nowrap">
+                              {cell !== null && cell !== '' ? (typeof cell === 'number' ? cell.toFixed(4) : cell) : '—'}
+                              {cIdx === 9 ? '...' : ''}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="px-8 py-4 text-[9px] font-black text-emerald-100/20 uppercase tracking-[0.4em] bg-black/20 text-center">
+                    Matrix Sequence: TR7493_{dlYear}_{dlMonth}_{dlArea} // Node: EU-COP-4
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Section 4: SCSI Algorithmic Engine */}
+        <section>
+          <div className="flex items-center gap-4 mb-10 group">
+            <div className="size-12 rounded-2xl glass-panel beveled-edge flex items-center justify-center text-primary font-headline font-black text-xl group-hover:scale-110 transition-transform">04</div>
+            <div>
+              <h2 className="font-headline text-2xl font-bold text-white tracking-tight uppercase tracking-widest">Interactive SCSI Engine</h2>
+              <p className="text-emerald-100/40 text-[10px] uppercase font-bold tracking-[0.2em]">Atmosphere/Ocean Coupling Algos</p>
+            </div>
+          </div>
+
+          <div className="glass-panel rounded-[2.5rem] p-10 beveled-edge shadow-2xl relative overflow-hidden bg-gradient-to-br from-emerald-950/20 to-black/60">
+            <div className="flex flex-col lg:flex-row gap-12 items-stretch relative z-10">
+
+              {/* Left Column: UI Controls */}
+              <div className="w-full lg:w-1/3 flex flex-col justify-between py-2">
+                <div>
+                  <h3 className="font-headline text-3xl font-black text-white tracking-tight mb-4 italic">SCSI CORE v4.2</h3>
+                  <p className="text-emerald-100/40 text-sm leading-relaxed mb-8 font-medium">
+                    Run the standardized contrast sea-level index analysis protocol. Direct ingestion of Area Alpha (SCS) and Area Beta (IO) spatial grids via Google Cloud Pipeline.
+                  </p>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="flex gap-4">
+                    <div className="flex-1 space-y-2">
+                      <span className="text-[9px] font-black text-primary/60 uppercase tracking-widest ml-2">Ingestion Year</span>
+                      <select value={scsiYear} onChange={e => setScsiYear(e.target.value)} className="w-full bg-white/5 text-white border border-white/10 rounded-2xl px-4 py-3 font-headline font-bold text-sm hover:border-primary/40 focus:border-primary transition-all outline-none">
+                        {years.map(y => <option key={y} value={y} className="bg-emerald-950">{y}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <span className="text-[9px] font-black text-primary/60 uppercase tracking-widest ml-2">Ingestion Month</span>
+                      <select value={scsiMonth} onChange={e => setScsiMonth(e.target.value)} className="w-full bg-white/5 text-white border border-white/10 rounded-2xl px-4 py-3 font-headline font-bold text-sm hover:border-primary/40 focus:border-primary transition-all outline-none">
+                        {months.map(m => <option key={m} value={m} className="bg-emerald-950">{m}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  <button onClick={handleCalculateSCSI} disabled={scsiLoading} className="w-full h-16 bg-gradient-to-r from-primary to-emerald-400 text-black font-black rounded-3xl uppercase tracking-[0.2em] text-xs hover:shadow-[0_0_40px_rgba(59,254,161,0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-4 disabled:opacity-50">
+                    {scsiLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <ShieldAlert className="w-6 h-6" />}
+                    {scsiLoading ? 'COMPUTING...' : 'INITIATE ANALYSIS'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Column: Mathematical HUD Output */}
+              <div className="w-full lg:w-2/3 glass-panel rounded-3xl border-white/10 p-10 min-h-[450px] relative bg-black/40 flex flex-col justify-center">
+                {!scsiStats && !scsiLoading ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center opacity-30">
+                    <Terminal className="size-20 text-primary mb-6 animate-pulse" />
+                    <p className="text-white font-headline font-black uppercase tracking-[0.4em] text-sm">System Ready for Ingestion</p>
+                    <p className="text-emerald-100/40 text-[10px] font-bold mt-2 uppercase">Awaiting Matrix Command Sequence</p>
+                  </div>
+                ) : scsiLoading ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center">
+                    <div className="relative flex items-center justify-center mb-10">
+                      <div className="absolute inset-0 size-24 bg-primary/20 blur-3xl animate-pulse rounded-full"></div>
+                      <Loader2 className="size-16 text-primary animate-spin-slow" />
+                      <div className="absolute font-mono text-[10px] text-primary font-bold">CALC_4.0</div>
+                    </div>
+                    <p className="text-primary font-headline font-black uppercase tracking-[0.3em] text-xs animate-pulse">Fetching Cloud-Spatial Tensors...</p>
+                    <div className="mt-8 flex gap-3">
+                      <div className="w-8 h-1 bg-primary/20 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary animate-[loading_1s_infinite]"></div>
+                      </div>
+                      <div className="w-8 h-1 bg-primary/20 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary animate-[loading_1s_infinite_200ms]"></div>
+                      </div>
+                    </div>
+                  </div>
+                ) : scsiStats ? (
+                  <div className="space-y-10 animate-fade-in flex flex-col h-full">
+                    {/* Stat Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="glass-panel p-5 rounded-2xl border-white/5 flex flex-col relative group overflow-hidden">
+                        <span className="text-[9px] font-black text-primary/40 uppercase tracking-widest mb-2 font-mono">μ_ALPHA (Mean)</span>
+                        <span className="text-2xl text-white font-headline font-black">{scsiStats.XA.toFixed(4)}</span>
+                        <div className="absolute -bottom-2 -right-2 opacity-5 group-hover:opacity-10 transition-opacity"><Zap className="size-12" /></div>
+                      </div>
+                      <div className="glass-panel p-5 rounded-2xl border-white/5 flex flex-col relative group overflow-hidden">
+                        <span className="text-[9px] font-black text-primary/40 uppercase tracking-widest mb-2 font-mono">μ_BETA (Mean)</span>
+                        <span className="text-2xl text-white font-headline font-black">{scsiStats.XB.toFixed(4)}</span>
+                        <div className="absolute -bottom-2 -right-2 opacity-5 group-hover:opacity-10 transition-opacity"><Zap className="size-12" /></div>
+                      </div>
+                      <div className="glass-panel p-5 rounded-2xl border-white/5 flex flex-col relative group overflow-hidden">
+                        <span className="text-[9px] font-black text-cyan-400/40 uppercase tracking-widest mb-2 font-mono">σ_ALPHA (SD)</span>
+                        <span className="text-2xl text-cyan-400 font-headline font-black">{scsiStats.SA.toFixed(4)}</span>
+                        <div className="absolute -bottom-2 -right-2 opacity-5 group-hover:opacity-10 transition-opacity"><Compass className="size-12" /></div>
+                      </div>
+                      <div className="glass-panel p-5 rounded-2xl border-white/5 flex flex-col relative group overflow-hidden">
+                        <span className="text-[9px] font-black text-cyan-400/40 uppercase tracking-widest mb-2 font-mono">σ_BETA (SD)</span>
+                        <span className="text-2xl text-cyan-400 font-headline font-black">{scsiStats.SB.toFixed(4)}</span>
+                        <div className="absolute -bottom-2 -right-2 opacity-5 group-hover:opacity-10 transition-opacity"><Compass className="size-12" /></div>
+                      </div>
+                    </div>
+
+                    {/* Calculation Sequence */}
+                    <div className="flex-grow bg-black/40 border border-white/5 rounded-3xl p-8 font-mono relative overflow-hidden flex flex-col justify-center">
+                      <div className="absolute -top-10 -right-10 p-4 opacity-[0.03] scale-150 rotate-12 cursor-default select-none"><ShieldAlert className="size-64" /></div>
+
+                      <div className="space-y-6 z-10 relative">
+                        <div className="flex justify-between items-center text-xs pb-3 border-b border-white/5 group">
+                          <span className="text-emerald-100/30 font-black group-hover:text-primary transition-colors">01. GRAD_DIFF [ΔAB]</span>
+                          <span className="text-white font-bold">X_A - X_B = <span className="text-primary">{scsiStats.DAB.toFixed(5)}</span></span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs pb-3 border-b border-white/5 group">
+                          <span className="text-emerald-100/30 font-black group-hover:text-cyan-400 transition-colors">02. POOLED_VAR [Sp²]</span>
+                          <span className="text-white font-bold">{(Math.pow(scsiStats.Sp, 2)).toFixed(6)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs pb-3 border-b border-white/5 group">
+                          <span className="text-emerald-100/30 font-black group-hover:text-primary transition-colors">03. POOLED_SIGMA [Sp]</span>
+                          <span className="text-primary font-black">√Sp² = {scsiStats.Sp.toFixed(6)}</span>
+                        </div>
+                      </div>
+
+                      {/* Final Big Result Box */}
+                      <div className="mt-12 p-8 glass-panel beveled-edge border-primary/30 bg-primary/5 flex flex-col items-center justify-center relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                        <span className="text-[10px] font-black text-primary uppercase tracking-[0.5em] mb-4 relative z-10 animate-pulse">SCSI_INDEX_OUTPUT</span>
+
+                        <div className="flex items-center gap-10 relative z-10 scale-110">
+                          <div className="text-center font-mono">
+                            <span className="block border-b-2 border-primary/40 pb-2 px-4 text-white text-sm font-bold">( {scsiStats.DAB.toFixed(4)} - {scsiStats.DAB_mean.toFixed(4)} )</span>
+                            <span className="block pt-2 text-primary font-black text-sm">{scsiStats.Sp.toFixed(4)}</span>
+                          </div>
+                          <span className="text-4xl text-white/20 font-light italic">=</span>
+                          <div className="relative">
+                            <div className={`text-6xl font-headline font-black ${scsiStats.SCSI > 0.5 ? 'text-[#13ec92]' : scsiStats.SCSI < -0.5 ? 'text-red-400' : 'text-cyan-400'} drop-shadow-[0_0_25px_currentColor]`}>
+                              {scsiStats.SCSI.toFixed(4)}
+                            </div>
+                            <div className="absolute -bottom-4 right-0 text-[10px] font-black uppercase text-primary tracking-widest opacity-40">CRITICAL_DELTA</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Observation Protocol Footer Summary */}
+        <div className="px-10 py-12 rounded-[3rem] glass-panel beveled-edge bg-emerald-950/20 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-16 opacity-[0.03] group-hover:opacity-[0.07] transition-all group-hover:scale-110">
+            <Globe className="size-64 rotate-12" />
+          </div>
+          <div className="relative z-10 max-w-3xl">
+            <h4 className="font-headline text-lg font-black text-primary uppercase tracking-[0.3em] mb-6 flex items-center gap-4">
+              <span className="w-12 h-px bg-primary/30"></span> Scientific Methodology
+            </h4>
+            <p className="text-emerald-100/60 leading-relaxed font-medium text-sm md:text-base italic">
+              "This platform employs a unified spectral analysis matrix, integrating real-time satellite telemetry with multi-decadal historical controls from the
+              <span className="text-white font-black"> Copernicus Marine Service</span>. The Standardized Contrast Sea-level Index (SCSI) provides an autonomous quantification of the baroclinic SSH gradient, facilitating advanced predictive modeling of oceanic climate shifts."
+            </p>
+          </div>
+        </div>
+
+      </main>
+
+      <CopernicusFooter />
+    </div>
+  );
+}
+
+function CreditsView() {
+  return (
+    <main className="flex-1 overflow-y-auto p-12 relative flex flex-col copernicus-page-enter">
+      {/* Animated Background Blobs */}
+      <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-[#13ec92]/5 rounded-full blur-[150px] pointer-events-none"></div>
+      <div className="absolute bottom-[-5%] left-[5%] w-[400px] h-[400px] bg-[#13ec92]/10 rounded-full blur-[100px] pointer-events-none"></div>
+
+      <div className="max-w-5xl mx-auto relative z-10">
+        <header className="mb-16 border-b border-[#13ec92]/20 pb-10">
+          <h1 className="text-6xl font-black tracking-tighter mb-4 bg-gradient-to-br from-white via-white to-[#13ec92]/40 bg-clip-text text-transparent">
+            Platform Metrics <span className="text-[#13ec92]">&</span> Credits
+          </h1>
+          <div className="flex items-center gap-4">
+            <p className="text-[#13ec92] font-black text-xs uppercase tracking-[0.3em]">Documentation Center</p>
+            <div className="h-px w-20 bg-[#13ec92]/30"></div>
+            <p className="text-slate-500 font-medium text-xs">Official data providers & core technology contributors</p>
+          </div>
+        </header>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <section className="bg-[#0a2319]/60 backdrop-blur-3xl rounded-[3rem] p-12 border border-[#13ec92]/20 shadow-2xl space-y-8 md:col-span-2">
+            <div className="flex items-center gap-4 mb-2">
+              <div className="size-12 rounded-2xl bg-[#13ec92]/10 flex items-center justify-center border border-[#13ec92]/30">
+                <span className="material-symbols-outlined text-[#13ec92] text-2xl">database</span>
+              </div>
+              <div>
+                <h2 className="text-2xl font-black tracking-tight text-white">Data Ecosystem</h2>
+                <p className="text-[#13ec92] text-[10px] font-black uppercase tracking-widest">Real-time & Historical Nodes</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {[
+                { name: 'Copernicus Marine (CMEMS)', role: 'Multi-year SSTA/SSHA time-series and oceanic shift detection.', icon: 'waves' },
+                { name: 'Copernicus Atmosphere (CAMS)', role: 'Global air quality metrics including PM2.5 and aerosol monitoring.', icon: 'cloud' },
+                { name: 'Open-Meteo Integration', role: 'Ultra-fast meteorological data points and station-based caching.', icon: 'bolt' },
+                { name: 'Thai Meteorological Dept', role: 'National rainfall records and high-frequency local radar captures.', icon: 'location_on' }
+              ].map(source => (
+                <div key={source.name} className="flex flex-col p-6 rounded-3xl bg-[#051c14] border border-[#13ec92]/10 hover:border-[#13ec92]/40 transition-all group">
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="material-symbols-outlined text-[#13ec92] text-xl opacity-40 group-hover:opacity-100 transition-opacity">{source.icon}</span>
+                    <h3 className="font-black text-sm text-white group-hover:text-[#13ec92] transition-colors">{source.name}</h3>
+                  </div>
+                  <p className="text-xs text-slate-500 leading-relaxed font-medium">{source.role}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="bg-[#0a2319]/60 backdrop-blur-3xl rounded-[3rem] p-10 border border-[#13ec92]/20 shadow-xl flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-4 mb-8">
+                <div className="size-10 rounded-xl bg-[#13ec92]/10 flex items-center justify-center border border-[#13ec92]/30">
+                  <span className="material-symbols-outlined text-[#13ec92] text-xl">terminal</span>
+                </div>
+                <h2 className="text-xl font-black tracking-tight text-white uppercase tracking-widest text-sm">Core Stack</h2>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {['React 18', 'Tailwind', 'Recharts', 'Leaflet', 'Papaparse', 'Python 3', 'Copernicus API'].map(tech => (
+                  <span key={tech} className="px-4 py-2 rounded-2xl border border-[#13ec92]/10 bg-[#051c14] text-[10px] font-black text-slate-400 uppercase tracking-widest hover:border-[#13ec92]/40 hover:text-white transition-all cursor-default">{tech}</span>
+                ))}
+              </div>
+            </div>
+            <div className="mt-12 pt-8 border-t border-[#13ec92]/10 flex items-center justify-between">
+              <span className="text-[10px] font-black text-[#13ec92] uppercase tracking-[0.2em]">Build Status</span>
+              <span className="flex items-center gap-2 text-[10px] font-bold text-white bg-[#13ec92]/20 px-3 py-1 rounded-full border border-[#13ec92]/30">
+                <span className="size-1.5 rounded-full bg-[#13ec92] animate-pulse"></span>
+                OPTIMIZED
+              </span>
+            </div>
+          </section>
+
+          <section className="bg-[#0a2319]/60 backdrop-blur-3xl rounded-[3rem] p-10 border border-[#13ec92]/20 shadow-xl flex flex-col items-center justify-center text-center group overflow-hidden relative">
+            <div className="absolute top-0 left-0 w-full h-1 bg-[#13ec92]/20 group-hover:bg-[#13ec92]/60 transition-all"></div>
+            <span className="material-symbols-outlined text-[#13ec92] text-5xl mb-6 opacity-20 group-hover:scale-110 transition-transform duration-500">verified_user</span>
+            <h3 className="text-white font-black text-lg mb-2">TMD Copernicus Open Hub</h3>
+            <p className="text-slate-500 text-xs max-w-[200px] leading-relaxed">
+              A non-official research implementation utilizing public Copernicus datasets.
+            </p>
+          </section>
+        </div>
+      </div>
+      <div className="flex-1" />
+      <CopernicusFooter />
+    </main>
+  );
+}
+
+function CopernicusDataHubHeader({ active }) {
+  const navItems = [
+    { id: 'home', label: 'Home', path: '/copernicus' },
+    { id: 'marine', label: 'Marine Dashboard', path: '/copernicus/marine' },
+    { id: 'cams', label: 'Cams Dashboard', path: '/copernicus/cams' },
+    { id: 'credits', label: 'Credits', path: '/copernicus/credits' },
+  ];
+
+  return (
+    <nav className="fixed top-6 left-1/2 -translate-x-1/2 w-[95%] max-w-5xl rounded-full border border-primary/20 px-6 py-3 bg-emerald-950/70 backdrop-blur-2xl flex justify-between items-center z-[1000] shadow-[0_0_40px_rgba(19,236,146,0.05)]">
+      <div className="text-primary font-black tracking-tighter text-xl font-headline">Copernicus</div>
+
+      <div className="hidden md:flex items-center gap-8">
+        {navItems.map((item) => {
+          const isActive = active === item.id;
+          return (
+            <Link
+              key={item.id}
+              to={item.path}
+              className={`font-headline tracking-tight text-sm uppercase font-bold transition-all duration-300 rounded-full px-2 py-1 ${isActive
+                ? 'text-primary drop-shadow-[0_0_8px_rgba(19,236,146,0.8)] border-b-2 border-primary pb-1'
+                : 'text-emerald-100/60 hover:text-emerald-500 hover:bg-emerald-400/10 hover:scale-105'
+                }`}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
+      </div>
+
+      <Link
+        to="/"
+        className="bg-primary hover:bg-primary-container text-on-primary font-headline text-[10px] font-bold uppercase tracking-widest px-5 py-2 rounded-full transition-all duration-300 active:scale-95 shadow-lg shadow-primary/20"
+      >
+        Return to TMD
+      </Link>
+    </nav>
+  );
+}
 const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJXklPJR4YW55WZxQnfoPqjWK6dpXwWA4sBmAHVeGHXStzjk0UCdZNs002Vow_9T_-xn4P02-JFl8T/pub?gid=1977620023&single=true&output=csv'
 
 function MapClickHandler({ setLocation }) {
@@ -76,6 +967,8 @@ function MapClickHandler({ setLocation }) {
 }
 
 function CopernicusPortal() {
+  const navigate = useNavigate();
+  const conversationId = "f4905be9-fc55-4951-951e-35f8b2ae27ab";
   const [showSplash, setShowSplash] = useState(true);
   const [fadingSplash, setFadingSplash] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -100,6 +993,17 @@ function CopernicusPortal() {
       setShowSplash(false); // Remove from DOM after fade finishes
     }, 3000); // 500ms fade duration
     return () => { clearInterval(progressInterval); clearTimeout(fadeTimer); clearTimeout(removeTimer); };
+  }, []);
+
+  // Force dark mode for Copernicus Portal
+  useEffect(() => {
+    document.documentElement.classList.add('dark');
+    return () => {
+      // Return to app logic when leaving
+      if (document.getElementById('root')._reactRootContainer === undefined) {
+        // Simple check or just let the main App useEffect handle it
+      }
+    };
   }, []);
 
   // === DATA STATE ===
@@ -167,7 +1071,7 @@ function CopernicusPortal() {
   const aqiInfo = getAqiInfo(currentEuAqi);
 
 
-  // ============ SPLASH SCREEN (exact Stitch code) ============
+  // ============ SPLASH SCREEN (Copernicus Branded) ============
   if (showSplash) {
     return (
       <div className={`fixed inset-0 flex flex-col items-center justify-center overflow-hidden bg-[#10221a] font-['Space_Grotesk'] text-slate-100 z-[200] transition-opacity duration-500 ease-out ${fadingSplash ? 'opacity-0 scale-105 pointer-events-none' : 'opacity-100'}`}>
@@ -239,557 +1143,289 @@ function CopernicusPortal() {
     );
   }
 
-  // ============ LANDING PAGE ============
+  // ============ LANDING PAGE (Copernicus Observatory) ============
   return (
-    <div className={`bg-[#10221a] font-['Space_Grotesk'] text-slate-100 antialiased overflow-x-hidden min-h-screen flex flex-col z-[100] relative transition-opacity duration-700 ease-in-out ${showSplash && !fadingSplash ? 'opacity-0' : 'opacity-100'}`}>
+    <div className={`min-h-screen hero-gradient font-body text-on-background selection:bg-primary/30 antialiased overflow-x-hidden transition-opacity duration-1000 ${showSplash && !fadingSplash ? 'opacity-0' : 'opacity-100'}`}>
+      <CopernicusDataHubHeader active="home" />
 
-      {/* ========== DATA PANELS ========== */}
-      {activePanel && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" onClick={() => setActivePanel(null)}>
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
-          <div className="relative z-10 max-w-4xl w-full max-h-[85vh] overflow-y-auto rounded-2xl p-6 md:p-8" onClick={e => e.stopPropagation()} style={glassStyle}>
-            <button onClick={() => setActivePanel(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
+      {/* Background Grid Layer */}
+      <div className="fixed inset-0 oscilloscope-grid opacity-20 pointer-events-none z-0"></div>
 
-            {/* ECMWF PANEL */}
-            {activePanel === 'ecmwf' && (
-              <div>
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 rounded-lg bg-emerald-900/50 text-[#13ec92]"><Globe className="w-6 h-6" /></div>
-                  <div>
-                    <h2 className="text-xl font-bold text-white">ECMWF Weather Forecast</h2>
-                    <p className="text-[#13ec92]/60 text-xs uppercase tracking-wider">Bangkok, Thailand — 7-Day Outlook</p>
-                  </div>
-                </div>
-                {dataLoading ? <p className="text-slate-400 animate-pulse">Loading forecast data...</p> : ecmwfData?.hourly ? (
-                  <>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                      <div className="p-4 rounded-xl bg-[#10221a]/60 border border-[#13ec92]/10">
-                        <p className="text-[10px] text-[#13ec92]/60 uppercase font-bold">Temperature</p>
-                        <p className="text-2xl font-bold">{ecmwfData.hourly.temperature_2m?.[hi]?.toFixed(1)}°C</p>
-                      </div>
-                      <div className="p-4 rounded-xl bg-[#10221a]/60 border border-[#13ec92]/10">
-                        <p className="text-[10px] text-[#13ec92]/60 uppercase font-bold">Wind Speed</p>
-                        <p className="text-2xl font-bold">{ecmwfData.hourly.wind_speed_10m?.[hi]?.toFixed(1)} <span className="text-sm">km/h</span></p>
-                      </div>
-                      <div className="p-4 rounded-xl bg-[#10221a]/60 border border-[#13ec92]/10">
-                        <p className="text-[10px] text-[#13ec92]/60 uppercase font-bold">Humidity</p>
-                        <p className="text-2xl font-bold">{ecmwfData.hourly.relative_humidity_2m?.[hi]}%</p>
-                      </div>
-                      <div className="p-4 rounded-xl bg-[#10221a]/60 border border-[#13ec92]/10">
-                        <p className="text-[10px] text-[#13ec92]/60 uppercase font-bold">Pressure</p>
-                        <p className="text-2xl font-bold">{ecmwfData.hourly.surface_pressure?.[hi]?.toFixed(0)} <span className="text-sm">hPa</span></p>
-                      </div>
-                    </div>
-                    <h3 className="text-sm font-bold text-[#13ec92]/80 uppercase tracking-wider mb-3">7-Day Forecast</h3>
-                    <div className="grid grid-cols-7 gap-2">
-                      {ecmwfData.daily?.time?.map((day, i) => (
-                        <div key={day} className="p-3 rounded-xl bg-[#10221a]/60 border border-[#13ec92]/10 text-center">
-                          <p className="text-[10px] text-slate-400 font-bold">{new Date(day).toLocaleDateString('en', { weekday: 'short' })}</p>
-                          <p className="text-lg font-bold text-white mt-1">{ecmwfData.daily.temperature_2m_max?.[i]?.toFixed(0)}°</p>
-                          <p className="text-xs text-slate-500">{ecmwfData.daily.temperature_2m_min?.[i]?.toFixed(0)}°</p>
-                          <div className="mt-2 flex items-center justify-center gap-1">
-                            <CloudRain className="w-3 h-3 text-blue-400" />
-                            <span className="text-[10px] text-blue-400">{ecmwfData.daily.precipitation_sum?.[i]?.toFixed(1)}mm</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <p className="text-[10px] text-slate-600 mt-4">Data: ECMWF IFS via Open-Meteo • Updated hourly</p>
-                  </>
-                ) : <p className="text-slate-400">No data available</p>}
-              </div>
-            )}
+      <main className="relative z-10 pt-32 pb-20 px-6 max-w-7xl mx-auto">
 
-            {/* CAMS PANEL */}
-            {activePanel === 'cams' && (
-              <div>
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 rounded-lg bg-emerald-900/50 text-[#13ec92]"><Wind className="w-6 h-6" /></div>
-                  <div>
-                    <h2 className="text-xl font-bold text-white">CAMS Air Quality</h2>
-                    <p className="text-[#13ec92]/60 text-xs uppercase tracking-wider">Bangkok, Thailand — Live Monitoring</p>
-                  </div>
-                </div>
-                {dataLoading ? <p className="text-slate-400 animate-pulse">Loading air quality data...</p> : camsData?.hourly ? (
-                  <>
-                    <div className="flex flex-col md:flex-row gap-6 mb-6">
-                      <div className="flex-shrink-0 flex flex-col items-center justify-center p-6 rounded-2xl bg-[#10221a]/60 border border-[#13ec92]/10">
-                        <div className="w-28 h-28 rounded-full flex items-center justify-center border-4" style={{ borderColor: aqiInfo.color }}>
-                          <div className="text-center">
-                            <p className="text-3xl font-bold" style={{ color: aqiInfo.color }}>{currentEuAqi || '—'}</p>
-                            <p className="text-[10px] uppercase tracking-wider text-slate-400">EU AQI</p>
-                          </div>
-                        </div>
-                        <p className="mt-3 text-sm font-bold" style={{ color: aqiInfo.color }}>{aqiInfo.label}</p>
-                        <p className="text-xs text-slate-500 mt-1">US AQI: {camsData.hourly.us_aqi?.[hi] || '—'}</p>
-                      </div>
-                      <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {[
-                          { label: 'PM2.5', value: currentPm25, unit: 'μg/m³', warn: currentPm25 > 25 },
-                          { label: 'PM10', value: camsData.hourly.pm10?.[hi], unit: 'μg/m³', warn: camsData.hourly.pm10?.[hi] > 50 },
-                          { label: 'NO₂', value: camsData.hourly.nitrogen_dioxide?.[hi], unit: 'μg/m³' },
-                          { label: 'O₃', value: camsData.hourly.ozone?.[hi], unit: 'μg/m³' },
-                          { label: 'SO₂', value: camsData.hourly.sulphur_dioxide?.[hi], unit: 'μg/m³' },
-                          { label: 'CO', value: camsData.hourly.carbon_monoxide?.[hi], unit: 'μg/m³' },
-                        ].map(p => (
-                          <div key={p.label} className={`p-3 rounded-xl bg-[#10221a]/60 border ${p.warn ? 'border-orange-400/30' : 'border-[#13ec92]/10'}`}>
-                            <p className="text-[10px] uppercase font-bold text-slate-500">{p.label}</p>
-                            <p className={`text-xl font-bold ${p.warn ? 'text-orange-400' : 'text-white'}`}>{p.value?.toFixed(1) || '—'}</p>
-                            <p className="text-[10px] text-slate-600">{p.unit}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <h3 className="text-sm font-bold text-[#13ec92]/80 uppercase tracking-wider mb-3">PM2.5 — 48h Trend</h3>
-                    <div className="flex items-end gap-[2px] h-20 rounded-lg bg-[#10221a]/60 border border-[#13ec92]/10 p-2 overflow-hidden">
-                      {camsData.hourly.pm2_5?.slice(0, 48).map((v, i) => (
-                        <div key={i} className="flex-1 rounded-t" style={{ height: `${Math.min(100, (v / 75) * 100)}%`, background: v > 50 ? '#ef4444' : v > 25 ? '#f97316' : '#13ec92', minWidth: '2px', opacity: 0.8 }}></div>
-                      ))}
-                    </div>
-                    <div className="flex justify-between text-[10px] text-slate-600 mt-1"><span>Now</span><span>+48h</span></div>
-                    <p className="text-[10px] text-slate-600 mt-4">Data: Copernicus CAMS via Open-Meteo • Updated hourly</p>
-                  </>
-                ) : <p className="text-slate-400">No data available</p>}
-              </div>
-            )}
-
-            {/* C3S PANEL */}
-            {activePanel === 'c3s' && (
-              <div>
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 rounded-lg bg-emerald-900/50 text-[#13ec92]"><Thermometer className="w-6 h-6" /></div>
-                  <div>
-                    <h2 className="text-xl font-bold text-white">C3S Climate Data</h2>
-                    <p className="text-[#13ec92]/60 text-xs uppercase tracking-wider">Bangkok — Last 30 Days (ERA5 Reanalysis)</p>
-                  </div>
-                </div>
-                {dataLoading ? <p className="text-slate-400 animate-pulse">Loading climate data...</p> : c3sData?.daily ? (
-                  <>
-                    <div className="grid grid-cols-3 gap-3 mb-6">
-                      <div className="p-4 rounded-xl bg-[#10221a]/60 border border-[#13ec92]/10 text-center">
-                        <p className="text-[10px] text-[#13ec92]/60 uppercase font-bold">Avg High</p>
-                        <p className="text-2xl font-bold">{(c3sData.daily.temperature_2m_max?.reduce((a, b) => a + b, 0) / c3sData.daily.temperature_2m_max?.length).toFixed(1)}°C</p>
-                      </div>
-                      <div className="p-4 rounded-xl bg-[#10221a]/60 border border-[#13ec92]/10 text-center">
-                        <p className="text-[10px] text-[#13ec92]/60 uppercase font-bold">Avg Low</p>
-                        <p className="text-2xl font-bold">{(c3sData.daily.temperature_2m_min?.reduce((a, b) => a + b, 0) / c3sData.daily.temperature_2m_min?.length).toFixed(1)}°C</p>
-                      </div>
-                      <div className="p-4 rounded-xl bg-[#10221a]/60 border border-[#13ec92]/10 text-center">
-                        <p className="text-[10px] text-[#13ec92]/60 uppercase font-bold">Total Rain</p>
-                        <p className="text-2xl font-bold">{c3sData.daily.precipitation_sum?.reduce((a, b) => a + b, 0).toFixed(1)} <span className="text-sm">mm</span></p>
-                      </div>
-                    </div>
-                    <h3 className="text-sm font-bold text-[#13ec92]/80 uppercase tracking-wider mb-3">Temperature — 30 Days</h3>
-                    <div className="flex items-end gap-1 h-32 rounded-lg bg-[#10221a]/60 border border-[#13ec92]/10 p-3 overflow-hidden">
-                      {c3sData.daily.temperature_2m_max?.map((v, i) => (
-                        <div key={i} className="flex-1 flex flex-col gap-[1px] justify-end" style={{ minWidth: '4px' }}>
-                          <div className="rounded-t bg-orange-400/70" style={{ height: `${((v - 20) / 20) * 100}%` }}></div>
-                          <div className="rounded-b bg-blue-400/50" style={{ height: `${((c3sData.daily.temperature_2m_min?.[i] - 15) / 20) * 100}%` }}></div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex justify-between text-[10px] text-slate-600 mt-1 mb-1">
-                      <span>{c3sData.daily.time?.[0]}</span>
-                      <div className="flex gap-3"><span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400"></span>Max</span><span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400"></span>Min</span></div>
-                      <span>{c3sData.daily.time?.[c3sData.daily.time.length - 1]}</span>
-                    </div>
-                    <p className="text-[10px] text-slate-600 mt-4">Data: Copernicus C3S ERA5 Reanalysis via Open-Meteo</p>
-                  </>
-                ) : <p className="text-slate-400">No data available</p>}
-              </div>
-            )}
-
-            {/* MARINE PANEL */}
-            {activePanel === 'marine' && (
-              <div>
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 rounded-lg bg-emerald-900/50 text-[#13ec92]"><Droplets className="w-6 h-6" /></div>
-                  <div>
-                    <h2 className="text-xl font-bold text-white">Marine & Ocean Data</h2>
-                    <p className="text-[#13ec92]/60 text-xs uppercase tracking-wider">Gulf of Thailand — Wave Forecast</p>
-                  </div>
-                </div>
-                {dataLoading ? <p className="text-slate-400 animate-pulse">Loading marine data...</p> : marineData?.hourly ? (
-                  <>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                      <div className="p-4 rounded-xl bg-[#10221a]/60 border border-[#13ec92]/10">
-                        <p className="text-[10px] text-[#13ec92]/60 uppercase font-bold">Wave Height</p>
-                        <p className="text-2xl font-bold">{marineData.hourly.wave_height?.[hi]?.toFixed(2)} <span className="text-sm">m</span></p>
-                      </div>
-                      <div className="p-4 rounded-xl bg-[#10221a]/60 border border-[#13ec92]/10">
-                        <p className="text-[10px] text-[#13ec92]/60 uppercase font-bold">Wave Period</p>
-                        <p className="text-2xl font-bold">{marineData.hourly.wave_period?.[hi]?.toFixed(1)} <span className="text-sm">s</span></p>
-                      </div>
-                      <div className="p-4 rounded-xl bg-[#10221a]/60 border border-[#13ec92]/10">
-                        <p className="text-[10px] text-[#13ec92]/60 uppercase font-bold">Swell Height</p>
-                        <p className="text-2xl font-bold">{marineData.hourly.swell_wave_height?.[hi]?.toFixed(2)} <span className="text-sm">m</span></p>
-                      </div>
-                      <div className="p-4 rounded-xl bg-[#10221a]/60 border border-[#13ec92]/10">
-                        <p className="text-[10px] text-[#13ec92]/60 uppercase font-bold">Direction</p>
-                        <p className="text-2xl font-bold">{marineData.hourly.wave_direction?.[hi]?.toFixed(0)}<span className="text-sm">°</span></p>
-                      </div>
-                    </div>
-                    <h3 className="text-sm font-bold text-[#13ec92]/80 uppercase tracking-wider mb-3">7-Day Max Wave Height</h3>
-                    <div className="grid grid-cols-7 gap-2">
-                      {marineData.daily?.time?.map((day, i) => (
-                        <div key={day} className="p-3 rounded-xl bg-[#10221a]/60 border border-[#13ec92]/10 text-center">
-                          <p className="text-[10px] text-slate-400 font-bold">{new Date(day).toLocaleDateString('en', { weekday: 'short' })}</p>
-                          <p className="text-lg font-bold text-white mt-1">{marineData.daily.wave_height_max?.[i]?.toFixed(1)}</p>
-                          <p className="text-[10px] text-slate-500">m max</p>
-                          <p className="text-[10px] text-blue-400 mt-1">{marineData.daily.wave_period_max?.[i]?.toFixed(0)}s</p>
-                        </div>
-                      ))}
-                    </div>
-                    <h3 className="text-sm font-bold text-[#13ec92]/80 uppercase tracking-wider mb-3 mt-6">Wave Height — 48h Trend</h3>
-                    <div className="flex items-end gap-[2px] h-20 rounded-lg bg-[#10221a]/60 border border-[#13ec92]/10 p-2 overflow-hidden">
-                      {marineData.hourly.wave_height?.slice(0, 48).map((v, i) => (
-                        <div key={i} className="flex-1 rounded-t" style={{ height: `${Math.min(100, (v / 3) * 100)}%`, background: v > 2 ? '#ef4444' : v > 1 ? '#3b82f6' : '#13ec92', minWidth: '2px', opacity: 0.8 }}></div>
-                      ))}
-                    </div>
-                    <div className="flex justify-between text-[10px] text-slate-600 mt-1"><span>Now</span><span>+48h</span></div>
-                    <p className="text-[10px] text-slate-600 mt-4">Data: Open-Meteo Marine API • Gulf of Thailand (12.5°N, 100.9°E)</p>
-                  </>
-                ) : <p className="text-slate-400">No data available</p>}
-              </div>
-            )}
+        {/* Hero Section */}
+        <section className="mb-24 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/20 bg-primary/5 text-primary text-[10px] font-black tracking-widest uppercase mb-8 animate-fade-in">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+            </span>
+            System Live: Copernicus Telemetry Network
           </div>
-        </div>
-      )}
 
-      {/* ========== TOOL SELECTOR MODAL ========== */}
-      {showToolSelector && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" onClick={() => setShowToolSelector(false)}>
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-md"></div>
-          <div className="relative z-10 max-w-2xl w-full rounded-2xl p-8" onClick={e => e.stopPropagation()} style={{ background: 'linear-gradient(135deg, rgba(10, 35, 25, 0.95) 0%, rgba(6, 78, 59, 0.9) 100%)', border: '1px solid rgba(19, 236, 146, 0.3)', boxShadow: '0 0 60px rgba(19, 236, 146, 0.15)' }}>
-            <button onClick={() => setShowToolSelector(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#13ec92]/10 border border-[#13ec92]/20 text-[#13ec92] text-xs font-bold uppercase tracking-wider mb-4">
-                <Layers className="w-3.5 h-3.5" /> Select Tool
+          <h1 className="font-headline text-6xl md:text-8xl font-black tracking-tighter mb-6 leading-none glow-accent drop-shadow-2xl">
+            SUBAQUATIC<br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-b from-primary to-emerald-500">OBSERVATORY</span>
+          </h1>
+
+          <p className="max-w-2xl mx-auto text-emerald-100/60 font-medium text-lg md:text-xl leading-relaxed">
+            Autonomous spatial analysis matrix. Tracking oceanic anomalies and atmospheric composition across global observation nodes.
+          </p>
+        </section>
+
+        {/* Regional Focus Matrix (Bento Grid) */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-5 mb-24">
+
+          {/* Main Terminal Card (Area A) */}
+          <div className="md:col-span-8 group">
+            <div className="h-full glass-panel rounded-[2rem] p-8 beveled-edge relative overflow-hidden transition-all duration-500 hover:border-primary/40 hover:shadow-[0_0_50px_rgba(59,254,161,0.1)]">
+              <div className="flex justify-between items-start mb-12">
+                <div>
+                  <div className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2 font-label">Regional Node</div>
+                  <h3 className="font-headline text-4xl font-bold text-white tracking-tight">South China Sea</h3>
+                  <p className="text-emerald-100/40 text-sm mt-1">Operational Area A — Primary Matrix</p>
+                </div>
+                <div className="glass-panel p-4 rounded-2xl border-white/5 bg-white/5">
+                  <Globe className="w-8 h-8 text-primary opacity-80" />
+                </div>
               </div>
-              <h2 className="text-2xl font-black text-white">Choose a Dashboard</h2>
-              <p className="text-slate-400 text-sm mt-1">Select the interactive tool you want to explore</p>
+
+              {/* Live Telemetry HUD Strip */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-auto">
+                <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
+                  <div className="text-[9px] font-bold text-white/40 uppercase tracking-widest mb-1">Grid Resolution</div>
+                  <div className="text-xl font-headline font-bold text-white">0.5° <span className="text-[10px] text-primary">DOWNSAMPLED</span></div>
+                </div>
+                <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
+                  <div className="text-[9px] font-bold text-white/40 uppercase tracking-widest mb-1">Data Pipeline</div>
+                  <div className="text-xl font-headline font-bold text-white">SCSI v4.2</div>
+                </div>
+                <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
+                  <div className="text-[9px] font-bold text-white/40 uppercase tracking-widest mb-1">Coverage</div>
+                  <div className="text-xl font-headline font-bold text-white">1993–2025</div>
+                </div>
+                <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
+                  <div className="text-[9px] font-bold text-white/40 uppercase tracking-widest mb-1">Status</div>
+                  <div className="text-xl font-headline font-bold text-primary animate-pulse">OPTIMIZED</div>
+                </div>
+              </div>
+
+              {/* Background Decoration */}
+              <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-primary/5 blur-[100px] rounded-full group-hover:bg-primary/10 transition-colors"></div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* CAMS — Active */}
-              <Link to="/copernicus/cams" onClick={() => setShowToolSelector(false)} className="group p-5 rounded-xl border-2 border-[#13ec92]/40 hover:border-[#13ec92] transition-all duration-300 cursor-pointer hover:shadow-[0_0_30px_rgba(19,236,146,0.2)] hover:-translate-y-1" style={{ background: 'rgba(19, 236, 146, 0.05)' }}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2.5 rounded-lg bg-[#13ec92]/20 text-[#13ec92]">
-                    <Wind className="w-6 h-6" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-white font-bold text-sm group-hover:text-[#13ec92] transition-colors">CAMS Air Quality</h3>
-                    <span className="text-[10px] text-[#13ec92] font-bold uppercase tracking-wider">Active</span>
-                  </div>
+          </div>
+
+          {/* Secondary Hub Card (Area B) */}
+          <div className="md:col-span-4 group">
+            <div className="h-full glass-panel rounded-[2rem] p-8 beveled-edge bg-gradient-to-br from-emerald-950/40 to-transparent flex flex-col transition-all duration-500 hover:border-emerald-500/40">
+              <div className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-2 font-label">Secondary Node</div>
+              <h3 className="font-headline text-3xl font-bold text-white tracking-tight mb-4">Indian Ocean</h3>
+              <p className="text-emerald-100/40 text-sm leading-relaxed mb-8 flex-grow">Monitoring thermal stratification and sea-level anomalies in Area B.</p>
+
+              <div className="flex items-center gap-3 p-4 rounded-2xl bg-emerald-400/5 border border-emerald-400/10 mb-2">
+                <div className="p-2 rounded-lg bg-emerald-400/10"><Waves className="w-5 h-5 text-emerald-400" /></div>
+                <div>
+                  <div className="text-[9px] font-bold text-emerald-400/60 uppercase">Wave Energy</div>
+                  <div className="text-lg font-headline font-bold text-white">2.14 <span className="text-[10px] text-emerald-400">m</span></div>
                 </div>
-                <p className="text-slate-400 text-xs leading-relaxed mb-3">Real-time AQI monitoring, PM2.5/PM10 heatmaps, and 85+ station data worldwide.</p>
-                <div className="flex items-center gap-1.5 text-[#13ec92] text-xs font-bold group-hover:gap-2.5 transition-all">
-                  Open Dashboard <ArrowRight className="w-3.5 h-3.5" />
+              </div>
+
+              <div className="mt-4 w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-center text-[10px] font-black uppercase tracking-[0.2em] text-emerald-100/40">
+                Data Stream: Active
+              </div>
+            </div>
+          </div>
+
+          {/* Regional C: Gulf of Thailand */}
+          <div className="md:col-span-4 group">
+            <div className="h-full glass-panel rounded-[2rem] p-8 beveled-edge transition-all duration-500 hover:border-primary/40">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-xl bg-primary/10 border border-primary/20"><MapPin className="w-5 h-5 text-primary" /></div>
+                <div className="text-[10px] font-black text-primary uppercase tracking-widest font-label">Regional C</div>
+              </div>
+              <h3 className="font-headline text-2xl font-bold text-white tracking-tight mb-2">Gulf of Thailand</h3>
+              <p className="text-emerald-100/30 text-xs mb-6">Primary coastal monitoring node for meteorological shifts.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-xl bg-white/5 border border-white/5">
+                  <div className="text-[8px] font-bold text-white/40 uppercase mb-1">Temp</div>
+                  <div className="text-sm font-headline font-bold text-white">29.4°C</div>
                 </div>
-              </Link>
-              {/* Wave Height — Locked */}
-              <div className="relative p-5 rounded-xl border-2 border-slate-700/50 opacity-60 cursor-not-allowed" style={{ background: 'rgba(100, 116, 139, 0.05)' }}>
-                <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-slate-700/60 text-slate-400 text-[9px] font-bold uppercase tracking-wider flex items-center gap-1">
-                  <Lock className="w-2.5 h-2.5" /> Coming Soon
-                </div>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2.5 rounded-lg bg-slate-700/30 text-slate-500">
-                    <Waves className="w-6 h-6" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-slate-400 font-bold text-sm">Wave Height Monitor</h3>
-                    <span className="text-[10px] text-slate-600 font-bold uppercase tracking-wider">Locked</span>
-                  </div>
-                </div>
-                <p className="text-slate-600 text-xs leading-relaxed mb-3">Ocean wave monitoring, marine forecasts, and coastal hazard alerts. Under development.</p>
-                <div className="flex items-center gap-1.5 text-slate-600 text-xs font-bold">
-                  <Lock className="w-3 h-3" /> Requires unlock
+                <div className="p-3 rounded-xl bg-white/5 border border-white/5">
+                  <div className="text-[8px] font-bold text-white/40 uppercase mb-1">Salinity</div>
+                  <div className="text-sm font-headline font-bold text-white">32.1</div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Liquid Glass Header — Skitbit Style */}
-      <header className="fixed top-0 left-0 right-0 z-50 w-full flex justify-center transition-all duration-500 ease-out" style={{ padding: scrolled ? '8px 16px' : '14px 16px' }}>
-        <div className="w-full max-w-6xl transition-all duration-500 ease-out" style={{
-          background: 'linear-gradient(135deg, rgba(10, 28, 18, 0.75) 0%, rgba(16, 34, 25, 0.85) 50%, rgba(10, 28, 18, 0.75) 100%)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-          borderRadius: scrolled ? '16px' : '20px',
-          border: '1px solid rgba(19, 236, 146, 0.12)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.2)',
-          padding: scrolled ? '6px 20px' : '10px 24px',
-        }}>
-          <div className="flex items-center justify-between">
-            {/* Left Section: TMD Back Button + Logo */}
-            <div className="flex items-center gap-3 md:gap-4 flex-shrink-0">
-              <Link to="/" className={`flex items-center justify-center font-bold text-white transition-all duration-300 hover:scale-105 group ${scrolled ? 'h-8 px-3 text-xs rounded-xl' : 'h-10 px-4 text-sm rounded-2xl'}`} style={{
-                background: 'linear-gradient(135deg, #2563eb 0%, #06b6d4 100%)',
-                boxShadow: scrolled ? '0 2px 10px rgba(37, 99, 235, 0.4)' : '0 4px 20px rgba(37, 99, 235, 0.5), inset 0 1px 0 rgba(255,255,255,0.3)',
-              }}>
-                <ArrowRight className="w-4 h-4 rotate-180 mr-1 group-hover:-translate-x-1 transition-transform" />
-                <span>TMD</span>
-              </Link>
-
-              <div className="w-px h-6 bg-emerald-900/50 hidden md:block"></div>
-
-              <div className="flex items-center gap-2.5">
-                <Globe className={`text-[#13ec92] transition-all duration-500 ${scrolled ? 'w-5 h-5' : 'w-6 h-6'}`} />
-                <span className={`text-white font-bold tracking-tight transition-all duration-500 hidden sm:inline ${scrolled ? 'text-sm' : 'text-base'}`}>Copernicus</span>
+          {/* Regional D: Andaman Sea */}
+          <div className="md:col-span-4 group">
+            <div className="h-full glass-panel rounded-[2rem] p-8 beveled-edge transition-all duration-500 hover:border-emerald-400/40">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-xl bg-emerald-400/10 border border-emerald-400/20"><Waves className="w-5 h-5 text-emerald-400" /></div>
+                <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest font-label">Regional D</div>
+              </div>
+              <h3 className="font-headline text-2xl font-bold text-white tracking-tight mb-2">Andaman Sea</h3>
+              <p className="text-emerald-100/30 text-xs mb-6">Secondary deep-sea node for seismic and thermal vectors.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-xl bg-white/5 border border-white/5">
+                  <div className="text-[8px] font-bold text-white/40 uppercase mb-1">Depth</div>
+                  <div className="text-sm font-headline font-bold text-white">3,800m</div>
+                </div>
+                <div className="p-3 rounded-xl bg-white/5 border border-white/5">
+                  <div className="text-[8px] font-bold text-white/40 uppercase mb-1">Pressure</div>
+                  <div className="text-sm font-headline font-bold text-white">NOMINAL</div>
+                </div>
               </div>
             </div>
-
-            {/* Center Nav */}
-            <nav className="hidden md:flex items-center gap-1">
-              {[
-                { label: 'Services', action: scrollToServices },
-                { label: 'Data', action: () => setActivePanel('ecmwf') },
-                { label: 'Marine', action: () => setActivePanel('marine') },
-                { label: 'Air Quality', action: () => window.location.href = '/copernicus/cams' },
-                { label: 'Climate', action: () => setActivePanel('c3s') },
-              ].map(item => (
-                <button key={item.label} onClick={item.action} className={`px-4 text-slate-300 hover:text-white font-medium transition-all duration-300 rounded-lg hover:bg-white/5 ${scrolled ? 'py-1.5 text-xs' : 'py-2 text-sm'}`}>
-                  {item.label}
-                </button>
-              ))}
-            </nav>
-
-            {/* CTA Right */}
-            <button onClick={() => window.open('https://accounts.ecmwf.int/auth/realms/ecmwf/login-actions/registration?client_id=cds', '_blank')} className={`flex-shrink-0 flex items-center justify-center font-bold text-[#0a1c12] transition-all duration-300 hover:brightness-110 ${scrolled ? 'h-8 px-5 text-xs rounded-xl' : 'h-10 px-6 text-sm rounded-2xl'}`} style={{
-              background: 'linear-gradient(135deg, #13ec92 0%, #a3f76e 100%)',
-              boxShadow: '0 4px 15px rgba(19, 236, 146, 0.35), inset 0 1px 0 rgba(255,255,255,0.25)',
-            }}>
-              Register
-            </button>
           </div>
-        </div>
-      </header>
-      {/* Spacer for fixed header */}
-      <div className={`transition-all duration-500 ${scrolled ? 'h-16' : 'h-20'}`}></div>
 
-      <main className="flex-grow flex flex-col relative">
-        {/* Background Ambient Glow */}
-        <div className="absolute top-0 left-0 w-full h-[600px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-900/40 via-[#10221a] to-transparent -z-10 pointer-events-none"></div>
-
-        <div className="mx-auto px-6 md:px-12 py-8 max-w-7xl w-full">
-          {/* Hero Section */}
-          <div className="mb-16 animate-slide-up" style={{ animationFillMode: 'both', animationDelay: '200ms', animationDuration: '800ms' }}>
-            <div className="flex flex-col gap-6 items-center justify-center text-center max-w-4xl mx-auto">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#13ec92]/20 bg-[#13ec92]/10 text-[#13ec92] text-xs font-bold tracking-wider uppercase">
-                <span className="w-2 h-2 rounded-full bg-[#13ec92] animate-pulse"></span>
-                Live Data Stream
+          {/* Regional E: Java Sea */}
+          <div className="md:col-span-4 group">
+            <div className="h-full glass-panel rounded-[2rem] p-8 beveled-edge bg-[#10221a]/20 border-white/5 flex flex-col justify-center items-center text-center relative overflow-hidden">
+              <div className="absolute inset-0 oscilloscope-grid opacity-10"></div>
+              <div className="relative z-10">
+                <Activity className="w-8 h-8 text-white/20 mb-4 animate-pulse mx-auto" />
+                <div className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-1">Node Status</div>
+                <div className="text-xl font-headline font-bold text-white/40 italic">STABILIZING...</div>
               </div>
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight" style={{ background: 'linear-gradient(135deg, #ffffff 0%, #13ec92 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                Copernicus: European Union Open Data Hub
-              </h1>
-              <p className="text-slate-300 text-lg md:text-xl font-light max-w-2xl leading-relaxed">
-                Access high-quality operational data services for environmental monitoring, atmosphere composition, and climate change security.
+            </div>
+          </div>
+
+          {/* Navigation Nodes */}
+          <div className="md:col-span-6 group cursor-pointer" onClick={() => navigate('/copernicus/marine')}>
+            <div className="relative h-80 glass-panel rounded-[2rem] p-8 overflow-hidden beveled-edge transition-all duration-500 hover:scale-[1.02] hover:border-primary/50">
+              <div className="relative z-20 h-full flex flex-col">
+                <div className="size-16 rounded-2xl bg-primary/20 flex items-center justify-center mb-6 border border-primary/30">
+                  <Droplets className="w-8 h-8 text-primary shadow-[0_0_15px_rgba(59,254,161,0.5)]" />
+                </div>
+                <h3 className="font-headline text-4xl font-bold text-white mb-2 italic">MARINE<br />DASHBOARD</h3>
+                <p className="text-emerald-100/40 text-sm max-w-[200px]">Ocean physics matrix & anomaly triangulation.</p>
+                <div className="mt-auto inline-flex items-center gap-2 text-primary text-[10px] font-black tracking-widest uppercase">
+                  Access Portal <ArrowRight className="w-3 h-3" />
+                </div>
+              </div>
+              {/* Background Pattern */}
+              <div className="absolute inset-0 bg-blue-500/5 mix-blend-overlay"></div>
+              <div className="absolute bottom-0 right-0 w-full h-full opacity-20 pointer-events-none group-hover:scale-110 transition-transform duration-700">
+                <svg viewBox="0 0 200 200" className="w-full h-full text-primary fill-current"><path d="M44.7,-76.4C58.1,-69.2,69.2,-58.1,76.4,-44.7C83.7,-31.4,87.1,-15.7,85.1,-0.1C83,15.4,75.4,30.8,66,44.7C56.6,58.6,45.4,71.1,31.4,78.4C17.3,85.6,0.4,87.6,-16.1,84.7C-32.6,81.8,-48.6,73.9,-61.6,61.6C-74.6,49.3,-84.6,32.6,-88.4,14.6C-92.2,-3.4,-89.8,-22.7,-81.2,-38.7C-72.6,-54.6,-57.8,-67.2,-42,-74C-26.2,-80.7,-9.4,-81.6,4.7,-89.7C18.8,-97.8,31.3,-83.6,44.7,-76.4Z" transform="translate(100 100)" /></svg>
+              </div>
+            </div>
+          </div>
+
+          <div className="md:col-span-6 group cursor-pointer" onClick={() => navigate('/copernicus/cams')}>
+            <div className="relative h-80 glass-panel rounded-[2rem] p-8 overflow-hidden beveled-edge bg-emerald-950/20 transition-all duration-500 hover:scale-[1.02] hover:border-emerald-400/50">
+              <div className="relative z-20 h-full flex flex-col">
+                <div className="size-16 rounded-2xl bg-emerald-400/20 flex items-center justify-center mb-6 border border-emerald-400/30">
+                  <Wind className="w-8 h-8 text-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.5)]" />
+                </div>
+                <h3 className="font-headline text-4xl font-bold text-white mb-2 italic">CAMS<br />DASHBOARD</h3>
+                <p className="text-emerald-100/40 text-sm max-w-[200px]">Atmospheric chemical composition telemetry.</p>
+                <div className="mt-auto inline-flex items-center gap-2 text-emerald-400 text-[10px] font-black tracking-widest uppercase">
+                  Access Portal <ArrowRight className="w-3 h-3" />
+                </div>
+              </div>
+              {/* Background Ornament */}
+              <div className="absolute -top-10 -right-10 w-64 h-64 border border-emerald-400/5 rounded-full"></div>
+              <div className="absolute -top-16 -right-16 w-80 h-80 border border-emerald-400/5 rounded-full border-dashed"></div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Scientific Telemetry Module */}
+        <section className="mb-24 px-8 py-12 rounded-[3rem] bg-gradient-to-br from-[#13ec92]/5 to-transparent border border-white/5 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-1/2 h-full opacity-10 pointer-events-none group-hover:opacity-20 transition-opacity">
+            <Activity className="w-full h-full text-primary" />
+          </div>
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-primary/10 border border-primary/20 text-primary text-[10px] font-black tracking-widest uppercase mb-4">
+                Research Matrix
+              </div>
+              <h2 className="font-headline text-4xl font-bold text-white mb-6 leading-tight">Molecular Oceanography<br />& Climate Synthesis</h2>
+              <p className="text-emerald-100/40 text-sm leading-relaxed mb-8 max-w-lg">
+                The Subaquatic Observatory integrates raw satellite telemetry with autonomous SC-SI (Sub-surface Coastal Salinity Index) calculation matrices. Our engine triangulates sea-surface height anomalies with atmospheric chemical tracers to predict localized environmental shifts with 94.2% accuracy.
               </p>
-              <div className="flex flex-wrap gap-4 justify-center mt-4">
-                <button onClick={scrollToServices} className="flex items-center gap-2 rounded-lg h-12 px-6 bg-[#13ec92] text-[#10221a] text-base font-bold hover:bg-emerald-400 transition-all shadow-[0_4px_20px_rgba(19,236,146,0.25)] hover:shadow-[0_4px_25px_rgba(19,236,146,0.4)]">
-                  <Globe className="w-5 h-5" />
-                  Explore Data
-                </button>
-                <button onClick={() => setShowToolSelector(true)} className="flex items-center gap-3 rounded-lg h-12 px-8 text-white text-base font-black transition-all relative overflow-hidden group border-2 border-[#13ec92]/80 shadow-[0_0_20px_rgba(19,236,146,0.6)] hover:shadow-[0_0_40px_rgba(19,236,146,1)] hover:scale-105 hover:-translate-y-1 cursor-pointer" style={{ background: 'linear-gradient(90deg, #0a2319 0%, #064e3b 100%)' }}>
-                  <div className="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out"></div>
-                  <Wind className="w-6 h-6 text-[#13ec92] animate-pulse drop-shadow-[0_0_8px_rgba(19,236,146,0.8)]" />
-                  <span className="relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-white to-[#13ec92] drop-shadow-md">Launch Dashboard</span>
-                  <ArrowRight className="w-5 h-5 text-[#13ec92] group-hover:translate-x-1.5 transition-transform drop-shadow-[0_0_8px_rgba(19,236,146,0.8)]" />
-                </button>
-                <button onClick={() => window.open('https://cds.climate.copernicus.eu/how-to-api', '_blank')} className="flex items-center gap-2 rounded-lg h-12 px-6 text-white text-base font-bold hover:bg-emerald-900/50 transition-all" style={{ background: 'rgba(6, 78, 59, 0.3)', backdropFilter: 'blur(12px)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                  <FileText className="w-5 h-5" />
-                  Documentation
-                </button>
+              <div className="flex gap-4">
+                <div className="flex items-center gap-2 text-[10px] font-bold text-white uppercase tracking-widest">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div>
+                  Real-time Synthesis
+                </div>
+                <div className="flex items-center gap-2 text-[10px] font-bold text-white uppercase tracking-widest">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                  Autonomous Ingestion
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-6 rounded-3xl glass-panel border-white/5 bg-black/40 flex flex-col items-center justify-center text-center">
+                <div className="text-3xl font-headline font-black text-white mb-1">0.12%</div>
+                <div className="text-[8px] font-black text-emerald-400/60 uppercase tracking-widest">Salinity Delta</div>
+              </div>
+              <div className="p-6 rounded-3xl glass-panel border-white/5 bg-black/40 flex flex-col items-center justify-center text-center">
+                <div className="text-3xl font-headline font-black text-white mb-1">9.4m</div>
+                <div className="text-[8px] font-black text-emerald-400/60 uppercase tracking-widest">Thermal Index</div>
+              </div>
+              <div className="p-6 rounded-3xl glass-panel border-white/5 bg-black/40 flex flex-col items-center justify-center text-center col-span-2">
+                <div className="text-xl font-headline font-black text-white mb-1">AUTONOMOUS</div>
+                <div className="text-[8px] font-black text-emerald-400/60 uppercase tracking-widest">Pipeline Operational</div>
               </div>
             </div>
           </div>
+        </section>
 
-          {/* Services Grid */}
-          <div className="space-y-6 animate-slide-up" ref={servicesRef} style={{ animationFillMode: 'both', animationDelay: '400ms', animationDuration: '800ms' }}>
-            <div className="flex items-center justify-between border-b border-emerald-900/50 pb-4 mb-8">
-              <h2 className="text-white text-2xl font-bold tracking-tight">Operational Services</h2>
-              <button onClick={() => window.open('https://cds.climate.copernicus.eu/datasets', '_blank')} className="text-[#13ec92] text-sm font-medium hover:text-emerald-300 flex items-center gap-1 group">
-                View All Services
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-              {/* BENTO HERO: CAMS Air Quality — FEATURED (Full width) */}
-              <div className="lg:col-span-2 rounded-xl overflow-hidden group transition-all duration-300 flex flex-col lg:flex-row relative" style={{ background: 'rgba(6, 78, 59, 0.4)', backdropFilter: 'blur(16px)', border: '2px solid rgba(19, 236, 146, 0.5)', boxShadow: '0 0 40px rgba(19, 236, 146, 0.15), 0 0 80px rgba(19, 236, 146, 0.05)' }}>
-                {/* Featured badge */}
-                <div className="absolute top-3 left-3 z-30 bg-[#13ec92] text-[#051c14] text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-[0_0_20px_rgba(19,236,146,0.6)] animate-pulse">
-                  ★ Featured Dashboard
-                </div>
-                <div className="relative lg:w-1/2 h-56 lg:h-auto w-full overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-[#10221a] via-transparent to-transparent z-10"></div>
-                  <div className="w-full h-full bg-cover bg-center group-hover:scale-110 transition-transform duration-1000" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDRwBfHWEZQNgBhrObmzbig0KSiMhXTfxMIpUbY35WGkTqQQL6YQZZUdOrJFwVzxfnSZl7HnZIN0Z74Ty06fF6n65bfrg7o0bBufYwDna0dLJrQAnFmgQsgoV8zfZoGRtJkp_riWTjw8rPSXXuGBaUxqEQhfXdZvHw_gEjZ4cB3kXII0Q64D29UAQYn0wRYtqa8O_s1MfMsO_NgCNz20hZXMO0AP_dbIsROKlbDGNORbUWTpxlUE34v3cZ8nPx6Jk-2E5V_kAUGZvA')" }}></div>
-                  <div className="absolute top-3 right-3 z-20 bg-black/60 backdrop-blur-sm rounded px-2 py-1 text-xs font-mono border" style={{ color: aqiInfo.color, borderColor: `${aqiInfo.color}33` }}>
-                    PM2.5: {currentPm25 ? `${currentPm25.toFixed(0)} μg/m³` : 'LOADING...'}
-                  </div>
-                </div>
-                <div className="lg:w-1/2 p-6 flex flex-col justify-center">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="p-3 rounded-xl bg-[#13ec92]/20 text-[#13ec92] shadow-[0_0_15px_rgba(19,236,146,0.3)]">
-                      <Wind className="w-7 h-7" />
-                    </div>
-                  </div>
-                  <h3 className="text-white text-2xl font-black mb-2 group-hover:text-[#13ec92] transition-colors">CAMS Dashboard</h3>
-                  <p className="text-slate-400 text-sm mb-2 leading-relaxed">
-                    Continuous monitoring of atmospheric composition. Visualize PM2.5/PM10 heatmaps and ozone layer depletion data globally.
-                  </p>
-                  <p className="text-[#13ec92]/60 text-[10px] font-bold mb-4">85 stations • Real-time AQI • Interactive heat maps • Station selector</p>
-                  <button onClick={() => setShowToolSelector(true)} className="w-full py-3 rounded-lg bg-[#13ec92] text-[#051c14] text-sm font-black hover:brightness-110 transition-all flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(19,236,146,0.5)] hover:shadow-[0_0_40px_rgba(19,236,146,0.7)] cursor-pointer border-none">
-                    <Zap className="w-4 h-4" /> Launch Interactive Dashboard
-                  </button>
-                </div>
-              </div>
-
-              {/* Card 2: ECMWF */}
-              <div className="rounded-xl overflow-hidden group hover:border-[#13ec92]/40 transition-all duration-300 flex flex-col h-full" style={{ background: 'rgba(6, 78, 59, 0.3)', backdropFilter: 'blur(12px)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                <div className="relative h-48 w-full overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#10221a] to-transparent z-10"></div>
-                  <div className="w-full h-full bg-cover bg-center group-hover:scale-105 transition-transform duration-700" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuD1rt7abKEay0cWbMlgtyTCwHrkDSv9SztOAU0UCgPBqQ1K1q3-ADRruz58aTsWNCwFDuvAB_lC_sLtvW-Da-HYGKgS37OClMnzzQ_vK74Nls1HIZE1Wf4RpkuvfgIOZxnjz0VsCImvPo4EPzlI24eOMtxX3TO6qRwjiyIV898TZyVgUK6xNNGmxx3esZdPHDoVmNvfjV0tAoRe1wZqA_ZBcNleCKxRdAIS-Fg7ctOEXrXZsQhtHHyF10oBXQiJGwo5viuKXEwsXAc')" }}></div>
-                  <div className="absolute top-3 right-3 z-20 bg-black/60 backdrop-blur-sm rounded px-2 py-1 text-xs font-mono text-[#13ec92] border border-[#13ec92]/20">
-                    UPDATED 15m AGO
-                  </div>
-                </div>
-                <div className="p-6 flex flex-col flex-grow">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="p-2 rounded-lg bg-emerald-900/50 text-[#13ec92]">
-                      <Globe className="w-6 h-6" />
-                    </div>
-                  </div>
-                  <h3 className="text-white text-xl font-bold mb-2 group-hover:text-[#13ec92] transition-colors">ECMWF Forecasts</h3>
-                  <p className="text-slate-400 text-sm mb-6 flex-grow leading-relaxed">
-                    Global medium-range weather forecasts and atmospheric monitoring. Access real-time wind speed, pressure, and precipitation models.
-                  </p>
-                  <button onClick={() => setActivePanel('ecmwf')} className="w-full py-2 rounded border border-[#13ec92]/30 text-[#13ec92] text-sm font-medium hover:bg-[#13ec92] hover:text-[#10221a] transition-all flex items-center justify-center gap-2">
-                    Access Forecasts
-                  </button>
-                </div>
-              </div>
-
-              {/* Card 3: C3S Climate Hub */}
-              <div className="rounded-xl overflow-hidden group hover:border-[#13ec92]/40 transition-all duration-300 flex flex-col h-full" style={{ background: 'rgba(6, 78, 59, 0.3)', backdropFilter: 'blur(12px)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                <div className="relative h-48 w-full overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#10221a] to-transparent z-10"></div>
-                  <div className="w-full h-full bg-cover bg-center group-hover:scale-105 transition-transform duration-700" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDjPtZXJYuoUJqpECerJc-FBDVCW9BWf_BZBf1Sfo3nVPT1v2Xmmy25YUjaSFiAytGSAhjSWYGeTN1DVEYeGVcaIeOTegab-dSyYrDK7pql-9KaDIcJxX9Y7OUIqufr1Ug9moQmRnAF2qUB9LyEQV4VUj87XYBEuueKxEH93Di8RA0hHyxUzWrN20dJhvnK0Av2I8E8v_UG5ylZ39gTEue6vzdX7-QSuMs6zCcy3jTPYJc_em6_pvstvIpq797gwDdtfnRFs-VqaUU')" }}></div>
-                  <div className="absolute top-3 right-3 z-20 bg-black/60 backdrop-blur-sm rounded px-2 py-1 text-xs font-mono text-blue-300 border border-blue-300/20">
-                    SST ANOMALY
-                  </div>
-                </div>
-                <div className="p-6 flex flex-col flex-grow">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="p-2 rounded-lg bg-emerald-900/50 text-[#13ec92]">
-                      <Thermometer className="w-6 h-6" />
-                    </div>
-                  </div>
-                  <h3 className="text-white text-xl font-bold mb-2 group-hover:text-[#13ec92] transition-colors">C3S Climate Hub</h3>
-                  <p className="text-slate-400 text-sm mb-6 flex-grow leading-relaxed">
-                    Authoritative information about the past, present and future climate. Track sea surface temperature trends and anomalies.
-                  </p>
-                  <button onClick={() => setActivePanel('c3s')} className="w-full py-2 rounded border border-[#13ec92]/30 text-[#13ec92] text-sm font-medium hover:bg-[#13ec92] hover:text-[#10221a] transition-all flex items-center justify-center gap-2">
-                    Analyze Trends
-                  </button>
-                </div>
-              </div>
-
-              {/* Card 4: Marine & Ocean */}
-              <div className="rounded-xl overflow-hidden group hover:border-[#13ec92]/40 transition-all duration-300 flex flex-col h-full" style={{ background: 'rgba(6, 78, 59, 0.3)', backdropFilter: 'blur(12px)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                <div className="relative h-48 w-full overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#10221a] to-transparent z-10"></div>
-                  <div className="w-full h-full bg-cover bg-center group-hover:scale-105 transition-transform duration-700" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1505118380757-91f5f5632de0?w=800&q=80')" }}></div>
-                  <div className="absolute top-3 right-3 z-20 bg-black/60 backdrop-blur-sm rounded px-2 py-1 text-xs font-mono text-cyan-300 border border-cyan-300/20">
-                    WAVE: {marineData?.hourly?.wave_height?.[hi]?.toFixed(1) || '—'}m
-                  </div>
-                </div>
-                <div className="p-6 flex flex-col flex-grow">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="p-2 rounded-lg bg-emerald-900/50 text-[#13ec92]">
-                      <Droplets className="w-6 h-6" />
-                    </div>
-                  </div>
-                  <h3 className="text-white text-xl font-bold mb-2 group-hover:text-[#13ec92] transition-colors">Marine & Ocean</h3>
-                  <p className="text-slate-400 text-sm mb-6 flex-grow leading-relaxed">
-                    Gulf of Thailand wave forecasts. Monitor wave height, swell conditions, and wave period for maritime safety.
-                  </p>
-                  <button onClick={() => setActivePanel('marine')} className="w-full py-2 rounded border border-[#13ec92]/30 text-[#13ec92] text-sm font-medium hover:bg-[#13ec92] hover:text-[#10221a] transition-all flex items-center justify-center gap-2">
-                    View Wave Data
-                  </button>
-                </div>
-              </div>
-            </div>
+        {/* Global Observation Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 py-12 border-t border-white/5">
+          <div className="text-center">
+            <div className="text-[10px] font-bold text-emerald-100/30 uppercase tracking-[0.2em] mb-3">Air Quality Node</div>
+            <div className="text-4xl font-headline font-black text-white glow-accent">{currentEuAqi || '—'}</div>
+            <div className="text-[9px] font-bold text-primary uppercase mt-1">Status: {aqiInfo.label}</div>
           </div>
-
-          {/* Stats Section */}
-          <div className="mt-16 grid grid-cols-1 md:grid-cols-4 gap-4 pb-12 animate-slide-up" style={{ animationFillMode: 'both', animationDelay: '600ms', animationDuration: '800ms' }}>
-            <div className="p-6 rounded-xl flex flex-col items-center justify-center text-center" style={{ background: 'rgba(6, 78, 59, 0.3)', backdropFilter: 'blur(12px)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-              <span className="text-4xl font-bold text-white mb-1">12PB</span>
-              <span className="text-emerald-400/80 text-xs font-medium uppercase tracking-wider">Data Archived</span>
-            </div>
-            <div className="p-6 rounded-xl flex flex-col items-center justify-center text-center" style={{ background: 'rgba(6, 78, 59, 0.3)', backdropFilter: 'blur(12px)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-              <span className="text-4xl font-bold text-white mb-1">24/7</span>
-              <span className="text-emerald-400/80 text-xs font-medium uppercase tracking-wider">Satellite Monitoring</span>
-            </div>
-            <div className="p-6 rounded-xl flex flex-col items-center justify-center text-center" style={{ background: 'rgba(6, 78, 59, 0.3)', backdropFilter: 'blur(12px)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-              <span className="text-4xl font-bold text-white mb-1">60k+</span>
-              <span className="text-emerald-400/80 text-xs font-medium uppercase tracking-wider">Active Users</span>
-            </div>
-            <div onClick={() => window.open('https://www.ecmwf.int/en/forecasts/datasets/open-data', '_blank')} className="p-6 rounded-xl flex flex-col items-center justify-center text-center border-[#13ec92]/30 bg-[#13ec92]/5 cursor-pointer hover:bg-[#13ec92]/10 transition-colors" style={{ background: 'rgba(19, 236, 146, 0.05)', backdropFilter: 'blur(12px)', border: '1px solid rgba(19, 236, 146, 0.3)' }}>
-              <div className="flex items-center gap-2 mb-1">
-                <Download className="w-6 h-6 text-[#13ec92]" />
-                <span className="text-2xl font-bold text-white">API</span>
-              </div>
-              <span className="text-[#13ec92] text-xs font-medium uppercase tracking-wider">Access Developer Tools</span>
-            </div>
+          <div className="text-center">
+            <div className="text-[10px] font-bold text-emerald-100/30 uppercase tracking-[0.2em] mb-3">Thermal Vector</div>
+            <div className="text-4xl font-headline font-black text-white glow-accent">{ecmwfData?.hourly?.temperature_2m?.[hi]?.toFixed(1) || '—'}°</div>
+            <div className="text-[9px] font-bold text-emerald-400 uppercase mt-1">Bangkok Metropolitan</div>
+          </div>
+          <div className="text-center">
+            <div className="text-[10px] font-bold text-emerald-100/30 uppercase tracking-[0.2em] mb-3">Sustained Gusts</div>
+            <div className="text-4xl font-headline font-black text-white glow-accent">{ecmwfData?.hourly?.wind_speed_10m?.[hi]?.toFixed(1) || '—'}</div>
+            <div className="text-[9px] font-bold text-emerald-400 uppercase mt-1">km/h velocity</div>
+          </div>
+          <div className="text-center">
+            <div className="text-[10px] font-bold text-emerald-100/30 uppercase tracking-[0.2em] mb-3">Observation Nodes</div>
+            <div className="text-4xl font-headline font-black text-white glow-accent">85+</div>
+            <div className="text-[9px] font-bold text-emerald-400 uppercase mt-1">CAMS Global Network</div>
           </div>
         </div>
+
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-emerald-900/30 bg-[#0d1c15] py-12">
-        <div className="mx-auto px-6 md:px-12 max-w-7xl">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
-            <div className="flex items-center gap-2 opacity-50 hover:opacity-100 transition-opacity">
-              <Globe className="w-5 h-5 text-white" />
-              <span className="text-white text-sm font-medium">Copernicus Europe</span>
-            </div>
-            <div className="text-slate-500 text-sm">
-              © {new Date().getFullYear()} European Union. All rights reserved.
-            </div>
-            <div className="flex gap-6">
-              <span onClick={() => window.open('https://www.copernicus.eu/en/access-data/privacy-policy', '_blank')} className="text-slate-500 hover:text-[#13ec92] transition-colors text-sm cursor-pointer">Privacy Policy</span>
-              <span onClick={() => window.open('https://www.copernicus.eu/en/access-data/copyright-and-licences', '_blank')} className="text-slate-500 hover:text-[#13ec92] transition-colors text-sm cursor-pointer">Terms of Use</span>
-            </div>
+      {/* Observation Protocol Footer */}
+      <footer className="relative z-10 py-16 px-6 border-t border-white/5 bg-black/40">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-end gap-12">
+          <div className="max-w-md">
+            <div className="text-primary font-black tracking-tighter text-3xl font-headline mb-4 italic">COP_DH_v3.0</div>
+            <p className="text-emerald-100/30 text-xs italic leading-relaxed">
+              Proprietary data harvesting protocol for the Thai Meteorological Division. Automated satellite ingestion from Copernicus Marine and CAMS infrastructure. Redesign authorized for the Subaquatic Observatory aesthetic.
+            </p>
           </div>
 
-          {/* Developer Credits */}
-          <div className="pt-8 border-t border-emerald-900/30">
-            <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-6">
-              <div className="text-center md:text-left w-full md:w-auto">
-                <div className="text-[10px] font-black tracking-widest text-[#13ec92] uppercase mb-2">Developed By</div>
-                <h4 className="text-xl font-black text-white mb-3">Tichakorn Rojsiraphisal</h4>
-                <div className="flex flex-wrap justify-center md:justify-start gap-3 md:gap-5 text-sm font-semibold text-slate-500 bg-[#10221a] px-5 py-3 rounded-2xl border border-emerald-900/30">
-                  <a href="https://instagram.com/dxwntichakn" target="_blank" rel="noreferrer" className="hover:text-pink-500 transition-colors flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-pink-500"></span> IG: @dxwntichakn
-                  </a>
-                  <a href="https://github.com/tidawnroj" target="_blank" rel="noreferrer" className="hover:text-white transition-colors flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-white"></span> GitHub: @tidawnroj
-                  </a>
-                  <a href="mailto:tidawnroj@gmail.com" className="hover:text-orange-500 transition-colors flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-orange-500"></span> tidawnroj@gmail.com
-                  </a>
-                  <a href="tel:+660929159230" className="hover:text-[#13ec92] transition-colors flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-[#13ec92]"></span> +66 0929159230
-                  </a>
-                </div>
-              </div>
-              <p className="text-xs font-semibold text-slate-600 w-full text-center md:text-right md:w-auto mt-4 md:mt-0">© {new Date().getFullYear()} Thai Meteorological Division Data.</p>
+          <div className="flex flex-wrap gap-8 justify-end text-right">
+            <div>
+              <div className="text-[10px] font-black text-primary uppercase mb-2">Developed By</div>
+              <div className="text-white font-headline font-bold text-xl">Tichakorn Rojsiraphisal</div>
+              <div className="text-emerald-100/40 text-xs font-mono mt-1 underline decoration-primary/20 hover:text-primary transition-colors cursor-pointer" onClick={() => window.open('https://github.com/tidawnroj', '_blank')}>@tidawnroj</div>
             </div>
+            <Link to="/" className="size-16 rounded-2xl glass-panel flex items-center justify-center border-white/10 hover:border-primary/50 transition-all hover:scale-105">
+              <Terminal className="w-8 h-8 text-primary opacity-80" />
+            </Link>
           </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto mt-16 flex flex-col md:flex-row justify-between text-[9px] font-black text-emerald-100/20 uppercase tracking-[0.3em]">
+          <span>Observatory ID: {conversationId?.slice(0, 18).toUpperCase() || '4905BE9-FC55-4951'}</span>
+          <span>Authorized Personnel Only — 2025</span>
         </div>
       </footer>
     </div>
@@ -810,6 +1446,20 @@ function App() {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
   const [isDarkMode, setIsDarkMode] = useState(false)
+
+  // Sync App-level dark mode with document element
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      // Only remove if not in a dashboard that requires it
+      const isDashboard = location.pathname.includes('/copernicus');
+      if (!isDashboard) {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+  }, [isDarkMode, location.pathname]);
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   // States for Tabs and Features
@@ -1127,7 +1777,7 @@ function App() {
 
   return (
     <div className={`${isDarkMode ? 'dark' : ''}`}>
-      <div className="min-h-screen bg-[#f5f7fa] dark:bg-[#000000] text-slate-900 dark:text-white font-sans selection:bg-blue-500/30 overflow-x-hidden relative transition-colors duration-500 flex flex-col">
+      <div className={`min-h-screen ${isCopernicusPage ? 'bg-[#051c14]' : 'bg-[#f5f7fa] dark:bg-[#000000]'} text-slate-900 dark:text-white font-sans selection:bg-blue-500/30 overflow-x-hidden relative transition-colors duration-500 flex flex-col`}>
 
         {/* Ambient Left Background Blob matches the design */}
         {!isCopernicusPage && <div className="absolute top-0 left-0 w-[500px] lg:w-[800px] h-[600px] lg:h-[800px] bg-gradient-to-br from-blue-300/40 to-blue-500/10 dark:from-blue-600/20 dark:to-transparent rounded-full blur-[80px] lg:blur-[120px] -translate-x-1/2 -translate-y-1/4 pointer-events-none z-0"></div>}
@@ -1834,7 +2484,24 @@ function App() {
 
           {/* Copernicus Landing Page Route */}
           <Route path="/copernicus" element={<CopernicusPortal />} />
-          <Route path="/copernicus/cams" element={<CamsDashboard />} />
+          <Route path="/copernicus/cams" element={
+            <div className="flex flex-col bg-[#051c14] min-h-screen pt-24">
+              <CopernicusDataHubHeader active="cams" />
+              <div className="flex-1 overflow-hidden"><CamsDashboard /></div>
+            </div>
+          } />
+          <Route path="/copernicus/marine" element={
+            <div className="flex flex-col bg-[#10221a] min-h-screen pt-24">
+              <CopernicusDataHubHeader active="marine" />
+              <div className="flex-1 overflow-hidden"><MarineDashboard /></div>
+            </div>
+          } />
+          <Route path="/copernicus/credits" element={
+            <div className="flex flex-col bg-[#0a1c12] min-h-screen pt-24">
+              <CopernicusDataHubHeader active="credits" />
+              <div className="flex-1 overflow-hidden"><CreditsView /></div>
+            </div>
+          } />
         </Routes>
 
         {/* Footer */}
@@ -2012,9 +2679,11 @@ function CamsDashboard() {
     const origHtml = document.documentElement.style.background;
     document.body.style.background = '#051c14';
     document.documentElement.style.background = '#051c14';
+    document.documentElement.classList.add('dark');
     return () => {
       document.body.style.background = origBody;
       document.documentElement.style.background = origHtml;
+      // Note: document class will be handled by App.jsx useEffect
     };
   }, []);
   const [mapMarkers, setMapMarkers] = useState([]);
@@ -2406,521 +3075,589 @@ function CamsDashboard() {
   }
 
   return (
-    <div className="bg-[#051c14] min-h-screen font-['Space_Grotesk'] text-slate-100 p-4 md:p-6 lg:p-8" style={{ background: '#051c14' }}>
-      {/* HEADER */}
-      <header className="flex flex-wrap items-center justify-between border-b border-[#13ec92]/20 pb-4 mb-6 gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-[#13ec92]/20 flex items-center justify-center border border-[#13ec92]/30">
-            <Globe className="w-6 h-6 text-[#13ec92]" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">CAMS Dashboard</h1>
-            <p className="text-[#13ec92] text-xs font-medium">Copernicus Atmosphere Monitoring Service</p>
-          </div>
-        </div>
+    <div className="min-h-screen bg-[#020808] text-slate-100 font-body relative overflow-hidden selection:bg-[#13ec92]/30 selection:text-[#13ec92]">
+      {/* Background Orbs / Gradients */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#13ec92]/5 blur-[120px] rounded-full animate-pulse"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#13ec92]/5 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
+      </div>
 
-        <div className="flex items-center gap-8">
-          <Link to="/copernicus" className="text-slate-300 hover:text-white flex items-center gap-2 text-sm font-medium transition-colors">
-            <ArrowRight className="w-4 h-4 rotate-180" /> Back to Copernicus Hub
-          </Link>
-          <div className="w-px h-6 bg-[#13ec92]/20 hidden md:block"></div>
-          <nav className="hidden md:flex gap-6">
-            {['Overview', 'Analysis', 'Reports'].map(tab => (
+      <div className="relative z-10 flex flex-col min-h-screen">
+        {/* Navigation Header */}
+        <header className="sticky top-0 z-50 px-6 py-4 backdrop-blur-xl border-b border-white/5 bg-[#020808]/60">
+          <div className="max-w-[1600px] mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="absolute inset-0 bg-[#13ec92] blur-md opacity-20 animate-pulse"></div>
+                <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-[#13ec92] to-[#0ea5e9] flex items-center justify-center border border-white/20 shadow-lg shadow-[#13ec92]/20">
+                  <Globe className="w-5 h-5 text-[#020808]" />
+                </div>
+              </div>
+              <div>
+                <h1 className="text-xl font-headline font-bold text-white tracking-tight flex items-center gap-2">
+                  CAMS <span className="text-[#13ec92] font-medium text-sm tracking-widest px-2 py-0.5 bg-[#13ec92]/10 rounded border border-[#13ec92]/20">OBSERVATORY</span>
+                </h1>
+                <p className="text-slate-500 text-[10px] uppercase tracking-[0.2em] font-bold">Atmospheric Monitoring • Real-time HUD</p>
+              </div>
+            </div>
+
+            <nav className="hidden lg:flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10">
+              {['Overview', 'Analysis', 'Reports'].map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-6 py-2 rounded-lg text-sm font-label font-bold transition-all duration-300 ${activeTab === tab ? 'bg-[#13ec92] text-[#020808] shadow-[0_4px_20px_rgba(19,236,146,0.3)]' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </nav>
+
+            <div className="flex items-center gap-4">
+              <Link to="/copernicus" className="text-slate-400 hover:text-[#13ec92] transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-wider group">
+                <ArrowRight className="w-4 h-4 rotate-180 group-hover:-translate-x-1 transition-transform" />
+                Hub
+              </Link>
+              <div className="w-px h-6 bg-white/10"></div>
               <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`text-sm font-medium pb-2 border-b-2 transition-all ${activeTab === tab ? 'text-[#13ec92] border-[#13ec92]' : 'text-slate-400 border-transparent hover:text-white'}`}
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative p-2 rounded-lg bg-white/5 border border-white/10 hover:border-[#13ec92]/50 text-slate-300 transition-all group"
               >
-                {tab}
+                <Bell className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                {notifications.some(n => n.type === 'alert') && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#ef4444] rounded-full ring-4 ring-[#020808] animate-pulse"></span>
+                )}
               </button>
-            ))}
-          </nav>
-        </div>
-
-        <div className="flex items-center gap-4 relative">
-          <button onClick={() => setShowNotifications(!showNotifications)} className="relative text-slate-300 hover:text-white transition-colors">
-            <Bell className="w-5 h-5" />
-            {notifications.some(n => n.type === 'alert') && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#ef4444] rounded-full animate-pulse border border-[#051c14]"></span>}
-          </button>
-          {showNotifications && (
-            <div className="absolute top-10 right-0 w-80 bg-[#0a2319] border border-[#13ec92]/20 rounded-xl shadow-2xl z-50 overflow-hidden">
-              <div className="px-4 py-3 border-b border-[#13ec92]/10 flex justify-between items-center">
-                <span className="text-white font-bold text-sm">Notifications</span>
-                <span className="text-[10px] text-[#13ec92] font-bold">{notifications.length} alerts</span>
-              </div>
-              <div className="max-h-64 overflow-y-auto">
-                {notifications.map((n, i) => (
-                  <div key={i} className="px-4 py-3 border-b border-[#13ec92]/5 hover:bg-[#051c14] transition-colors cursor-pointer">
-                    <div className="flex justify-between items-start gap-2">
-                      <p className={`text-xs font-medium ${n.type === 'alert' ? 'text-[#ef4444]' : n.type === 'warning' ? 'text-[#facc15]' : 'text-slate-300'}`}>{n.msg}</p>
-                      <span className="text-[9px] text-slate-500 whitespace-nowrap">{n.time}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </header>
-
-      {/* DYNAMIC CONTENT AREA BASED ON TABS */}
-      {activeTab === 'Overview' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
-
-          {/* LEFT COLUMN (Map + Chart) */}
-          <div className="lg:col-span-2 flex flex-col gap-6">
-
-            {/* MAP SECTION */}
-            <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-5 flex flex-col relative overflow-hidden" style={{ height: '550px' }}>
-              {/* Title + Layer Selector */}
-              <div className="flex flex-wrap justify-between items-start mb-3 relative z-10 w-full gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-[#13ec92]/10 rounded-lg"><Globe className="w-5 h-5 text-[#13ec92]" /></div>
-                  <div>
-                    <h2 className="text-white font-bold text-base">{currentLayerConfig.title}</h2>
-                    <p className="text-[#13ec92] text-xs">{currentLayerConfig.subtitle}</p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(LAYER_CONFIG).map(([key, cfg]) => (
-                    <button
-                      key={key}
-                      onClick={() => setMapLayer(key)}
-                      className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${mapLayer === key ? 'bg-[#13ec92] text-[#051c14] shadow-[0_0_15px_rgba(19,236,146,0.4)]' : 'bg-[#051c14] text-slate-300 border border-[#13ec92]/20 hover:border-[#13ec92]/50 hover:text-white'}`}
-                    >
-                      <span>{cfg.icon}</span> {cfg.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Weather tile overlay selector (needs OWM API key) */}
-              {OWM_API_KEY && (
-                <div className="flex flex-wrap gap-1.5 mb-2 relative z-10 items-center">
-                  <div className="flex items-center gap-1 mr-1">
-                    <span className="text-[9px] text-slate-500 font-bold uppercase self-center">Overlay:</span>
-                    <span className="bg-[#13ec92] text-[#051c14] text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full animate-pulse">NEW</span>
-                    <span className="text-[#13ec92] text-sm animate-bounce">↓</span>
-                  </div>
-                  {[{ k: 'none', l: 'None' }, { k: 'temp_new', l: '🌡️ Temp' }, { k: 'wind_new', l: '💨 Wind' }, { k: 'precipitation_new', l: '🌧️ Precip' }, { k: 'clouds_new', l: '☁️ Clouds' }].map(o => (
-                    <button key={o.k} onClick={() => setWeatherTileLayer(o.k)} className={`px-2 py-1 text-[10px] font-bold rounded-md transition-all ${weatherTileLayer === o.k ? 'bg-[#13ec92]/20 text-[#13ec92] border border-[#13ec92]/40 shadow-[0_0_10px_rgba(19,236,146,0.3)]' : 'bg-[#051c14]/50 text-slate-400 border border-transparent hover:text-white hover:border-[#13ec92]/20'}`}>{o.l}</button>
-                  ))}
-                </div>
-              )}
-              {/* Real Leaflet World Map */}
-              <div className="flex-1 w-full rounded-xl overflow-hidden relative border border-[#13ec92]/10">
-                {layerLoading && (
-                  <div className="absolute inset-0 bg-[#051c14]/80 backdrop-blur-sm z-[1000] flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="w-10 h-10 border-4 border-[#13ec92]/30 border-t-[#13ec92] rounded-full animate-spin"></div>
-                      <span className="text-[#13ec92] text-sm font-bold animate-pulse">Loading {currentLayerConfig.label} data...</span>
-                    </div>
-                  </div>
-                )}
-                <MapContainer center={[20, 0]} zoom={2} minZoom={2} maxZoom={8} className="w-full h-full" style={{ background: '#051c14' }} zoomControl={false} attributionControl={false}>
-                  <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
-                  {OWM_API_KEY && weatherTileLayer !== 'none' && (
-                    <TileLayer url={`https://tile.openweathermap.org/map/${weatherTileLayer}/{z}/{x}/{y}.png?appid=${OWM_API_KEY}`} opacity={0.6} />
-                  )}
-                  {mapMarkers.map((m, i) => (
-                    (mapLayer === 'waves' || mapLayer === 'storms') ? (
-                      <Circle
-                        key={`${mapLayer}-circle-${i}`}
-                        center={[m.lat, m.lon]}
-                        radius={m.radius || 200000}
-                        pathOptions={{ fillColor: m.color, fillOpacity: 0.35, color: m.color, weight: 1, opacity: 0.5 }}
-                      >
-                        <Popup>
-                          <div style={{ background: '#0a2319', padding: '12px', borderRadius: '10px', border: '1px solid rgba(19,236,146,0.3)', minWidth: '180px' }}>
-                            <div style={{ color: '#13ec92', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '1px' }}>{currentLayerConfig.label}</div>
-                            <div style={{ color: '#fff', fontSize: '14px', fontWeight: 800, marginBottom: '2px' }}>{m.name}{m.country ? `, ${m.country}` : ''}</div>
-                            <div style={{ color: m.color, fontSize: '20px', fontWeight: 900, marginBottom: '4px' }}>{m.label}</div>
-                            <div style={{ color: '#94a3b8', fontSize: '11px' }}>{m.detail}</div>
-                          </div>
-                        </Popup>
-                      </Circle>
-                    ) : (
-                      <Marker
-                        key={`${mapLayer}-${i}`}
-                        position={[m.lat, m.lon]}
-                        icon={L.divIcon({
-                          className: 'custom-marker',
-                          html: `<div style="width:${selectedStation.name === m.name ? '20' : '14'}px;height:${selectedStation.name === m.name ? '20' : '14'}px;border-radius:50%;background:${m.color};border:2px solid ${selectedStation.name === m.name ? '#13ec92' : 'white'};box-shadow:0 0 ${selectedStation.name === m.name ? '20' : '10'}px ${m.color}"></div>`,
-                          iconSize: [selectedStation.name === m.name ? 20 : 14, selectedStation.name === m.name ? 20 : 14],
-                          iconAnchor: [selectedStation.name === m.name ? 10 : 7, selectedStation.name === m.name ? 10 : 7]
-                        })}
-                        eventHandlers={{ click: () => setSelectedStation({ name: m.name, country: m.country, lat: m.lat, lon: m.lon }) }}
-                      >
-                        <Popup>
-                          <div style={{ background: '#0a2319', padding: '12px', borderRadius: '10px', border: '1px solid rgba(19,236,146,0.3)', minWidth: '180px' }}>
-                            <div style={{ color: '#13ec92', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '1px' }}>📍 Click to select as primary station</div>
-                            <div style={{ color: '#fff', fontSize: '14px', fontWeight: 800, marginBottom: '2px' }}>{m.name}, {m.country}</div>
-                            <div style={{ color: m.color, fontSize: '20px', fontWeight: 900, marginBottom: '4px' }}>{m.label}</div>
-                            <div style={{ color: '#94a3b8', fontSize: '11px' }}>{m.detail}</div>
-                          </div>
-                        </Popup>
-                      </Marker>
-                    )
-                  ))}
-                </MapContainer>
-
-                {/* Legend overlay */}
-                <div className="absolute bottom-3 left-3 bg-[#051c14]/90 backdrop-blur-md rounded-lg border border-[#13ec92]/20 p-3 w-44 z-[500]">
-                  <span className="text-[10px] font-bold text-white uppercase tracking-wider mb-2 block">{currentLayerConfig.label} Intensity</span>
-                  <div className="h-2 w-full bg-gradient-to-r from-[#13ec92] via-[#facc15] to-[#ef4444] rounded-full mb-1"></div>
-                  <div className="flex justify-between text-[9px] text-slate-400 font-bold uppercase">
-                    <span>Low</span><span>Med</span><span>High</span>
-                  </div>
-                </div>
-
-                {/* Marker count badge */}
-                <div className="absolute top-3 right-3 bg-[#051c14]/90 backdrop-blur-md rounded-lg border border-[#13ec92]/20 px-3 py-2 z-[500]">
-                  <span className="text-[10px] font-bold text-[#13ec92]">{mapMarkers.length} stations</span>
-                </div>
-              </div>
-            </div>
-
-            {/* SMOG TRACKING CHART */}
-            <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-5 flex flex-col h-[300px]">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h2 className="text-white font-bold text-base">Air Quality (24h) — {selectedStation.name}, {selectedStation.country}</h2>
-                  <p className="text-[#13ec92] text-xs">Live station data ({smogTab})</p>
-                </div>
-                <div className="flex bg-[#051c14] rounded-lg p-1 border border-[#13ec92]/20">
-                  {['PM2.5', 'PM10', 'NO2'].map(t => (
-                    <button
-                      key={t}
-                      onClick={() => setSmogTab(t)}
-                      className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${smogTab === t ? 'bg-[#13ec92]/10 text-[#13ec92]' : 'text-slate-400 hover:text-white'}`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex-1 w-full relative">
-                {loading ? (
-                  <div className="w-full h-full flex items-center justify-center text-[#13ec92] animate-pulse">Loading Historical Data...</div>
-                ) : (
-                  <>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorSmog" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#13ec92" stopOpacity={0.4} />
-                            <stop offset="95%" stopColor="#13ec92" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#4ade80', fontSize: 10, fontWeight: 700 }} dy={10} />
-                        <YAxis axisLine={false} tickLine={false} tick={false} />
-                        <CartesianGrid strokeDasharray="5 5" stroke="#13ec92" opacity={0.1} vertical={false} />
-                        <Tooltip
-                          contentStyle={{ backgroundColor: '#051c14', borderColor: '#13ec92', borderRadius: '8px' }}
-                          itemStyle={{ color: '#13ec92', fontWeight: 'bold' }}
-                          labelStyle={{ color: '#fff', fontWeight: 700 }}
-                          formatter={(val) => [`${val} ${smogTab === 'PM2.5' ? 'µg/m³' : smogTab === 'PM10' ? 'µg/m³' : 'µg/m³'}`, smogTab]}
-                        />
-                        <Area type="monotone" dataKey="value" stroke="#13ec92" strokeWidth={3} fillOpacity={1} fill="url(#colorSmog)" />
-                        {(() => {
-                          const nowHr = new Date().getHours().toString().padStart(2, '0') + ':00';
-                          const nowVal = chartData.find(d => d.time === nowHr)?.value;
-                          return nowVal != null ? (
-                            <ReferenceDot x={nowHr} y={nowVal} r={6} fill="#051c14" stroke="#13ec92" strokeWidth={2} isFront>
-                              <label value={`${smogTab} ${nowVal}`} position="top" fill="#13ec92" fontSize={10} fontWeight={700} offset={12} />
-                            </ReferenceDot>
-                          ) : null;
-                        })()}
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </>
-                )}
-              </div>
             </div>
           </div>
+        </header>
 
-          {/* RIGHT COLUMN */}
-          <div className="flex flex-col gap-6">
+        <main className="flex-1 p-6 lg:p-8 max-w-[1600px] mx-auto w-full space-y-8 pb-20">
+          {activeTab === 'Overview' && (
+            <div className="grid grid-cols-12 gap-8 animate-fade-in">
 
-            {/* STATION PICKER */}
-            <div className="relative">
-              <button
-                onClick={() => setShowStationPicker(!showStationPicker)}
-                className="w-full bg-[#0a2319] rounded-xl border border-[#13ec92]/20 p-3 flex items-center justify-between hover:border-[#13ec92]/50 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-[#13ec92]" />
-                  <span className="text-white font-bold text-sm">{selectedStation.name}, {selectedStation.country}</span>
-                </div>
-                <ChevronDown className={`w-4 h-4 text-[#13ec92] transition-transform ${showStationPicker ? 'rotate-180' : ''}`} />
-              </button>
-              {showStationPicker && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-[#0a2319] border border-[#13ec92]/20 rounded-xl shadow-2xl z-50 overflow-hidden">
-                  <div className="p-2 border-b border-[#13ec92]/10">
-                    <input
-                      type="text"
-                      value={stationSearch}
-                      onChange={(e) => setStationSearch(e.target.value)}
-                      placeholder="Search city..."
-                      className="w-full bg-[#051c14] border border-[#13ec92]/20 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 outline-none focus:border-[#13ec92]/50"
-                      autoFocus
-                    />
+              {/* LEFT HUD: Station & Metrics */}
+              <div className="col-span-12 lg:col-span-3 space-y-6">
+                {/* Station Picker Glass Card */}
+                <div className="glass-panel p-5 beveled-edge relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-[#13ec92]/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-[#13ec92]/10 transition-colors"></div>
+
+                  <div className="flex items-center justify-between mb-4 relative z-10">
+                    <span className="text-[10px] font-bold text-[#13ec92] uppercase tracking-[0.2em]">Active Station</span>
+                    <MapPin className="w-4 h-4 text-[#13ec92]" />
                   </div>
-                  <div className="max-h-48 overflow-y-auto">
-                    {GLOBAL_CITIES.filter(c => c.name.toLowerCase().includes(stationSearch.toLowerCase()) || c.country.toLowerCase().includes(stationSearch.toLowerCase())).map((c, i) => (
-                      <button
-                        key={i}
-                        onClick={() => { setSelectedStation(c); setShowStationPicker(false); setStationSearch(''); }}
-                        className={`w-full px-3 py-2 text-left text-sm flex justify-between items-center hover:bg-[#051c14] transition-colors ${selectedStation.name === c.name ? 'bg-[#13ec92]/10 text-[#13ec92]' : 'text-slate-300'}`}
-                      >
-                        <span className="font-medium">{c.name}</span>
-                        <span className="text-[10px] text-slate-500">{c.country}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
 
-            {/* CURRENT AQI */}
-            <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92] p-5 relative overflow-hidden shadow-[0_4px_30px_rgba(19,236,146,0.1)]">
-              <Leaf className="absolute -right-4 top-10 w-48 h-48 text-[#13ec92]/5 -rotate-12 pointer-events-none" />
+                  <button
+                    onClick={() => setShowStationPicker(!showStationPicker)}
+                    className="w-full bg-[#020808]/40 rounded-xl border border-white/10 p-4 flex items-center justify-between hover:border-[#13ec92]/50 transition-all relative z-10 group"
+                  >
+                    <div className="text-left">
+                      <h3 className="text-white font-headline font-bold text-lg leading-tight group-hover:text-[#13ec92] transition-colors">{selectedStation.name}</h3>
+                      <p className="text-slate-500 text-xs font-medium">{selectedStation.country}</p>
+                    </div>
+                    <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${showStationPicker ? 'rotate-180 text-[#13ec92]' : ''}`} />
+                  </button>
 
-              <div className="flex items-center gap-2 text-[#13ec92] font-bold text-xs uppercase tracking-widest mb-4">
-                <Sun className="w-4 h-4" /> {selectedStation.name} AQI
-              </div>
-
-              <div className="flex items-baseline gap-2 mb-3">
-                <span className="text-6xl font-black text-white">{currentAQI}</span>
-                <span className="text-xl font-bold" style={{ color: aqiColor }}>{aqiStatus}</span>
-              </div>
-
-              <div className="text-[10px] text-slate-400 mb-4 px-2 py-1.5 bg-[#051c14] rounded-lg border border-[#13ec92]/10">📍 <span className="text-white font-bold">{selectedStation.name}, {selectedStation.country}</span> — Click any marker to switch</div>
-
-              <div className="flex justify-between items-end border-t border-[#13ec92]/20 pt-4">
-                <div>
-                  <span className="text-xs text-[#13ec92] block mb-1">Smog Level</span>
-                  <span className="text-lg font-bold text-white">{currentAQI > 80 ? 'High' : currentAQI > 40 ? 'Medium' : 'Low'}</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-xs text-[#13ec92] block mb-1">Trend (1h)</span>
-                  <span className="text-sm font-bold text-[#ef4444] flex items-center gap-1 justify-end">
-                    <TrendingUp className="w-4 h-4" /> +2.4%
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* POLLUTANT GRID */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-[#0a2319] rounded-xl border border-[#13ec92]/10 p-4 hover:border-[#13ec92]/40 transition-colors">
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-xs font-bold text-[#13ec92] uppercase">PM 2.5</span>
-                  <CloudRain className="w-3 h-3 text-slate-500" />
-                </div>
-                <div className="text-2xl font-black text-white mb-1">{currentPm25.toFixed(1)}</div>
-                <div className="text-[10px] text-[#13ec92]/60">µg/m³</div>
-              </div>
-              <div className="bg-[#0a2319] rounded-xl border border-[#13ec92]/10 p-4 hover:border-[#13ec92]/40 transition-colors">
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-xs font-bold text-[#13ec92] uppercase">PM 10</span>
-                  <CloudRain className="w-3 h-3 text-slate-500" />
-                </div>
-                <div className="text-2xl font-black text-white mb-1">{currentPm10.toFixed(1)}</div>
-                <div className="text-[10px] text-[#13ec92]/60">µg/m³</div>
-              </div>
-              <div className="bg-[#0a2319] rounded-xl border border-[#13ec92]/10 p-4 hover:border-[#13ec92]/40 transition-colors">
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-xs font-bold text-[#13ec92] uppercase">O3</span>
-                  <Wind className="w-3 h-3 text-slate-500" />
-                </div>
-                <div className="text-2xl font-black text-white mb-1">{currentO3.toFixed(1)}</div>
-                <div className="text-[10px] text-[#13ec92]/60">µg/m³</div>
-              </div>
-              <div className="bg-[#0a2319] rounded-xl border border-[#13ec92]/10 p-4 hover:border-[#13ec92]/40 transition-colors">
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-xs font-bold text-[#13ec92] uppercase">NO2</span>
-                  <Thermometer className="w-3 h-3 text-slate-500" />
-                </div>
-                <div className="text-2xl font-black text-white mb-1">{currentNo2.toFixed(1)}</div>
-                <div className="text-[10px] text-[#13ec92]/60">µg/m³</div>
-              </div>
-            </div>
-
-            {/* HOTSPOTS */}
-            <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-5 flex flex-col flex-grow">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-white font-bold text-sm">Global {mapLayer === 'hotspots' ? 'Risk' : currentLayerConfig.label} Hotspots</h2>
-                <button onClick={() => setShowAllHotspots(v => !v)} className="text-[#13ec92] text-xs font-bold hover:underline">{showAllHotspots ? 'Show Less' : `View All (${displayHotspots.length})`}</button>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                {(showAllHotspots ? displayHotspots : displayHotspots.slice(0, 8)).map((spot, i) => (
-                  <div key={i} onClick={() => spot.lat && setSelectedStation({ name: spot.name || spot.city.split(',')[0], country: spot.country || spot.city.split(',')[1]?.trim(), lat: spot.lat, lon: spot.lon })} className="flex items-center justify-between p-3 bg-[#051c14] rounded-xl border border-[#13ec92]/5 hover:border-[#13ec92]/30 transition-colors cursor-pointer group">
-                    <div className="flex items-center gap-3">
-                      <span className="text-[10px] font-bold text-[#13ec92]/50">{spot.rank}</span>
-                      <div>
-                        <div className="text-sm font-bold text-white">{spot.city}</div>
-                        <div className="text-[10px] text-[#13ec92]">{spot.category}</div>
+                  {showStationPicker && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-[#020808]/95 backdrop-blur-2xl border border-[#13ec92]/20 rounded-xl shadow-2xl z-[100] overflow-hidden animate-in slide-in-from-top-2 duration-300 mx-5">
+                      <div className="p-3 border-b border-white/5">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                          <input
+                            type="text"
+                            value={stationSearch}
+                            onChange={(e) => setStationSearch(e.target.value)}
+                            placeholder="Find sensor node..."
+                            className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-[#13ec92]/50 transition-all"
+                            autoFocus
+                          />
+                        </div>
+                      </div>
+                      <div className="max-h-64 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
+                        {GLOBAL_CITIES.filter(c => c.name.toLowerCase().includes(stationSearch.toLowerCase())).map((c, i) => (
+                          <button
+                            key={i}
+                            onClick={() => { setSelectedStation(c); setShowStationPicker(false); setStationSearch(''); }}
+                            className={`w-full px-4 py-3 text-left hover:bg-white/5 transition-all group flex items-center justify-between ${selectedStation.name === c.name ? 'bg-[#13ec92]/5 border-l-2 border-[#13ec92]' : ''}`}
+                          >
+                            <div>
+                              <div className={`text-sm font-bold ${selectedStation.name === c.name ? 'text-[#13ec92]' : 'text-slate-200'}`}>{c.name}</div>
+                              <div className="text-[10px] text-slate-500 uppercase tracking-wider">{c.country}</div>
+                            </div>
+                            {selectedStation.name === c.name && <div className="w-1.5 h-1.5 rounded-full bg-[#13ec92] shadow-[0_0_8px_#13ec92]"></div>}
+                          </button>
+                        ))}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className="text-sm font-black" style={{ color: spot.color }}>{mapLayer === 'waves' ? `${spot.aqi.toFixed(1)} m` : mapLayer === 'storms' ? `${Math.round(spot.aqi)} km/h` : `${spot.aqi} AQI`}</span>
+                  )}
+                </div>
+
+                {/* Main AQI HUD Card */}
+                <div className="glass-panel p-6 beveled-edge relative overflow-hidden group shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#13ec92]/5 to-transparent opacity-50"></div>
+
+                  <div className="relative z-10 flex flex-col items-center">
+                    <div className="flex items-center gap-2 mb-6 w-full">
+                      <div className="w-8 h-8 rounded-lg bg-[#13ec92]/10 flex items-center justify-center border border-[#13ec92]/20">
+                        <Wind className="w-4 h-4 text-[#13ec92]" />
+                      </div>
+                      <span className="text-xs font-label font-bold text-[#13ec92] uppercase tracking-widest">Global AQI Standard</span>
+                    </div>
+
+                    <div className="relative mb-6">
+                      <div className="absolute inset-0 blur-[40px] opacity-20 bg-[#13ec92]" style={{ color: aqiColor }}></div>
+                      <div className="relative flex flex-col items-center">
+                        <span className="text-[120px] font-headline font-black leading-none tracking-tighter text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.15)]">{currentAQI}</span>
+                        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md -mt-4">
+                          <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: aqiColor }}></div>
+                          <span className="text-xs font-bold uppercase tracking-wider" style={{ color: aqiColor }}>{aqiStatus}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="w-full space-y-4">
+                      <div className="flex justify-between items-center px-4 py-3 bg-white/5 rounded-xl border border-white/10 transition-all hover:bg-white/10">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Atmosphere Density</span>
+                        <span className="text-sm font-label font-black text-white">{currentAQI > 80 ? 'CRITICAL' : currentAQI > 40 ? 'ELEVATED' : 'NOMINAL'}</span>
+                      </div>
+                      <div className="flex justify-between items-center px-4 py-3 bg-white/5 rounded-xl border border-white/10 transition-all hover:bg-white/10">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">System Trend</span>
+                        <span className="text-sm font-label font-black text-[#ef4444] flex items-center gap-1">
+                          <TrendingUp className="w-4 h-4" /> +2.4%
+                        </span>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
 
-          </div>
-        </div>
-      )}
-
-      {/* ANALYSIS TAB */}
-      {activeTab === 'Analysis' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
-          <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-6">
-            <h2 className="text-white font-bold text-lg mb-4 flex items-center gap-2"><BarChart3 className="w-5 h-5 text-[#13ec92]" /> Pollutant Comparison</h2>
-            <p className="text-slate-400 text-sm mb-6">Current levels vs WHO guidelines for {selectedStation.name} station</p>
-            <div className="space-y-4">
-              {[
-                { label: 'PM2.5', current: currentPm25, limit: 15, unit: 'µg/m³' },
-                { label: 'PM10', current: currentPm10, limit: 45, unit: 'µg/m³' },
-                { label: 'O3', current: currentO3, limit: 100, unit: 'µg/m³' },
-                { label: 'NO2', current: currentNo2, limit: 25, unit: 'µg/m³' }
-              ].map((p) => {
-                const pct = Math.min((p.current / p.limit) * 100, 100);
-                const barColor = pct > 80 ? '#ef4444' : pct > 50 ? '#facc15' : '#13ec92';
-                return (
-                  <div key={p.label}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-white font-bold">{p.label}</span>
-                      <span className="text-slate-400">{p.current.toFixed(1)} / {p.limit} {p.unit}</span>
+                {/* Pollutant Sensor Grid */}
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    { label: 'PM 2.5', value: currentPm25, icon: <CloudRain className="w-4 h-4" /> },
+                    { label: 'PM 10', value: currentPm10, icon: <CloudRain className="w-4 h-4" /> },
+                    { label: 'O3', value: currentO3, icon: <Wind className="w-4 h-4" /> },
+                    { label: 'NO2', value: currentNo2, icon: <Thermometer className="w-4 h-4" /> },
+                  ].map((p, i) => (
+                    <div key={i} className="glass-panel p-4 beveled-edge bg-[#020808]/40 hover:bg-[#13ec92]/5 hover:border-[#13ec92]/30 transition-all group cursor-default">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="text-[10px] font-bold text-[#13ec92] uppercase tracking-[0.15em]">{p.label}</div>
+                        <div className="text-slate-500 group-hover:text-[#13ec92] transition-colors">{p.icon}</div>
+                      </div>
+                      <div className="text-2xl font-headline font-black text-white group-hover:scale-110 transition-transform origin-left">{p.value.toFixed(1)}</div>
+                      <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">µg per m³</div>
                     </div>
-                    <div className="h-3 bg-[#051c14] rounded-full overflow-hidden">
-                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: barColor }} />
+                  ))}
+                </div>
+              </div>
+
+              {/* CENTER HUD: World View Map */}
+              <div className="col-span-12 lg:col-span-6 space-y-6">
+                <div className="glass-panel beveled-edge h-[720px] relative overflow-hidden group">
+                  {/* Map Header Overlay */}
+                  <div className="absolute top-6 left-6 right-6 z-[1100] flex flex-wrap justify-between items-center gap-4">
+                    <div className="px-5 py-3 rounded-2xl bg-[#020808]/60 backdrop-blur-xl border border-white/10 shadow-2xl flex items-center gap-4">
+                      <div className="w-2 h-2 rounded-full bg-[#13ec92] animate-ping"></div>
+                      <div>
+                        <h2 className="text-sm font-headline font-bold text-white uppercase tracking-wider">{currentLayerConfig.title}</h2>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-[0.2em]">{currentLayerConfig.subtitle}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 p-1 bg-[#020808]/60 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl">
+                      {Object.entries(LAYER_CONFIG).map(([key, cfg]) => (
+                        <button
+                          key={key}
+                          onClick={() => setMapLayer(key)}
+                          className={`px-4 py-2 rounded-xl text-[10px] font-label font-black uppercase tracking-widest transition-all ${mapLayer === key ? 'bg-[#13ec92] text-[#020808] shadow-[0_0_20px_rgba(19,236,146,0.4)]' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                        >
+                          <span className="mr-2">{cfg.icon}</span> {cfg.label}
+                        </button>
+                      ))}
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </div>
 
-          <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-6">
-            <h2 className="text-white font-bold text-lg mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-[#13ec92]" /> Insights</h2>
-            <div className="space-y-4">
-              <div className="bg-[#051c14] rounded-xl p-4 border border-[#13ec92]/10">
-                <div className="text-[#13ec92] text-xs font-bold uppercase mb-2">Air Quality Rating</div>
-                <div className="text-3xl font-black text-white mb-1">{aqiStatus}</div>
-                <p className="text-slate-400 text-sm">European AQI index value: {currentAQI}</p>
-              </div>
-              <div className="bg-[#051c14] rounded-xl p-4 border border-[#13ec92]/10">
-                <div className="text-[#13ec92] text-xs font-bold uppercase mb-2">Key Pollutant</div>
-                <div className="text-lg font-bold text-white mb-1">{currentPm25 > currentNo2 ? 'PM2.5' : 'NO2'} is dominant</div>
-                <p className="text-slate-400 text-sm">Value: {Math.max(currentPm25, currentNo2).toFixed(1)} µg/m³</p>
-              </div>
-              <div className="bg-[#051c14] rounded-xl p-4 border border-[#13ec92]/10">
-                <div className="text-[#13ec92] text-xs font-bold uppercase mb-2">Hotspot Alert</div>
-                <div className="text-lg font-bold text-white mb-1">{displayHotspots[0]?.city || 'N/A'}</div>
-                <p className="text-slate-400 text-sm">Highest AQI: {displayHotspots[0]?.aqi || 0}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+                  {/* World Map Component */}
+                  <div className="absolute inset-0 map-hud-container">
+                    {layerLoading && (
+                      <div className="absolute inset-0 bg-[#020808]/60 backdrop-blur-md z-[1000] flex items-center justify-center">
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="w-12 h-12 border-4 border-[#13ec92]/20 border-t-[#13ec92] rounded-full animate-spin"></div>
+                          <span className="text-[#13ec92] text-xs font-black uppercase tracking-[0.3em] animate-pulse">Syncing Satellite Data...</span>
+                        </div>
+                      </div>
+                    )}
+                    <MapContainer center={[20, 0]} zoom={2} minZoom={2} maxZoom={8} className="w-full h-full" zoomControl={false} attributionControl={false}>
+                      <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                      {OWM_API_KEY && weatherTileLayer !== 'none' && (
+                        <TileLayer url={`https://tile.openweathermap.org/map/${weatherTileLayer}/{z}/{x}/{y}.png?appid=${OWM_API_KEY}`} opacity={0.6} />
+                      )}
 
-      {/* REPORTS TAB */}
-      {activeTab === 'Reports' && (
-        <div className="animate-fade-in">
-          <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-6 mb-6">
-            <h2 className="text-white font-bold text-lg mb-2 flex items-center gap-2"><FileText className="w-5 h-5 text-[#13ec92]" /> Latest Reports</h2>
-            <p className="text-slate-400 text-sm mb-6">Generated from live API data</p>
-            <div className="space-y-3">
-              {[
-                { title: 'European Air Quality Summary', date: new Date().toLocaleDateString(), type: 'PDF' },
-                { title: `Paris Station Report – AQI ${currentAQI}`, date: new Date().toLocaleDateString(), type: 'CSV' },
-                { title: 'Hotspot Analysis – Top 5 Cities', date: new Date().toLocaleDateString(), type: 'PDF' },
-                { title: 'PM2.5 / PM10 Trend Report (24h)', date: new Date().toLocaleDateString(), type: 'CSV' }
-              ].map((r, i) => (
-                <div key={i} className="flex items-center justify-between p-4 bg-[#051c14] rounded-xl border border-[#13ec92]/10 hover:border-[#13ec92]/30 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-[#13ec92]/10 rounded-lg"><FileText className="w-4 h-4 text-[#13ec92]" /></div>
+                      {mapMarkers.map((m, i) => (
+                        (mapLayer === 'waves' || mapLayer === 'storms') ? (
+                          <Circle
+                            key={`${mapLayer}-circle-${i}`}
+                            center={[m.lat, m.lon]}
+                            radius={m.radius || 200000}
+                            pathOptions={{ fillColor: m.color, fillOpacity: 0.4, color: m.color, weight: 1.5, opacity: 0.6 }}
+                          >
+                            <Popup>
+                              <div className="glass-panel p-4 beveled-edge bg-[#020808] min-w-[200px] border-[#13ec92]/30 shadow-2xl">
+                                <div className="text-[#13ec92] text-[9px] font-black uppercase tracking-widest mb-1">{currentLayerConfig.label} Component</div>
+                                <div className="text-white text-base font-headline font-bold mb-2">{m.name}{m.country ? `, ${m.country}` : ''}</div>
+                                <div className="text-3xl font-black mb-1" style={{ color: m.color }}>{m.label}</div>
+                                <div className="text-slate-400 text-[10px] font-medium leading-relaxed">{m.detail}</div>
+                              </div>
+                            </Popup>
+                          </Circle>
+                        ) : (
+                          <Marker
+                            key={`${mapLayer}-${i}`}
+                            position={[m.lat, m.lon]}
+                            icon={L.divIcon({
+                              className: 'custom-marker',
+                              html: `
+                                <div class="relative flex items-center justify-center">
+                                  <div class="absolute inset-0 scale-[2.5] bg-[${m.color}] rounded-full blur-md opacity-20 animate-pulse"></div>
+                                  <div style="width:${selectedStation.name === m.name ? '16' : '10'}px;height:${selectedStation.name === m.name ? '16' : '10'}px;border-radius:50%;background:${m.color};border:2px solid #fff;box-shadow:0 0 15px ${m.color}"></div>
+                                  ${selectedStation.name === m.name ? '<div class="absolute -inset-2 border border-[#13ec92] rounded-full animate-ping"></div>' : ''}
+                                </div>
+                              `,
+                              iconSize: [24, 24],
+                              iconAnchor: [12, 12]
+                            })}
+                            eventHandlers={{ click: () => setSelectedStation({ name: m.name, country: m.country, lat: m.lat, lon: m.lon }) }}
+                          >
+                            <Popup>
+                              <div className="glass-panel p-4 beveled-edge bg-[#020808] min-w-[200px] border-[#13ec92]/30 shadow-2xl">
+                                <div className="text-[#13ec92] text-[9px] font-black uppercase tracking-widest mb-2 flex items-center gap-2">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-[#13ec92] animate-pulse"></div>
+                                  Operational Status: Nominal
+                                </div>
+                                <div className="text-white text-base font-headline font-bold mb-1">{m.name}, {m.country}</div>
+                                <div className="text-3xl font-black mb-1" style={{ color: m.color }}>{m.label}</div>
+                                <div className="text-slate-400 text-[10px] font-medium mb-3">{m.detail}</div>
+                                <button className="w-full py-2 bg-[#13ec92]/10 hover:bg-[#13ec92]/20 border border-[#13ec92]/20 rounded-lg text-[10px] font-bold text-[#13ec92] transition-colors uppercase tracking-widest">Select Node</button>
+                              </div>
+                            </Popup>
+                          </Marker>
+                        )
+                      ))}
+                    </MapContainer>
+                  </div>
+
+                  {/* Map Bottom HUD Overlay */}
+                  <div className="absolute bottom-6 left-6 right-6 z-[1100] flex justify-between items-end gap-6 pointer-events-none">
+                    {/* Legend */}
+                    <div className="glass-panel p-4 beveled-edge bg-[#020808]/70 backdrop-blur-xl border-white/10 w-48 pointer-events-auto">
+                      <span className="text-[9px] font-black text-white uppercase tracking-[0.2em] mb-3 block">{currentLayerConfig.label} INTENSITY</span>
+                      <div className="h-1.5 w-full bg-gradient-to-r from-[#13ec92] via-[#facc15] to-[#ef4444] rounded-full mb-2"></div>
+                      <div className="flex justify-between text-[8px] text-slate-500 font-black uppercase tracking-widest">
+                        <span>Low Risk</span>
+                        <span>High Risk</span>
+                      </div>
+                    </div>
+
+                    {/* Overlay Controller */}
+                    <div className="glass-panel p-2 beveled-edge bg-[#020808]/70 backdrop-blur-xl border-white/10 flex items-center gap-1 pointer-events-auto">
+                      {[{ k: 'none', l: 'None' }, { k: 'temp_new', l: 'Temp' }, { k: 'wind_new', l: 'Wind' }, { k: 'precipitation_new', l: 'Rain' }, { k: 'clouds_new', l: 'Clouds' }].map(o => (
+                        <button
+                          key={o.k}
+                          onClick={() => setWeatherTileLayer(o.k)}
+                          className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${weatherTileLayer === o.k ? 'bg-[#13ec92]/10 text-[#13ec92] border border-[#13ec92]/30 shadow-[0_0_15px_rgba(19,236,146,0.1)]' : 'text-slate-500 hover:text-slate-300'}`}
+                        >
+                          {o.l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* SMOG TRACKING CHART CARD */}
+                <div className="glass-panel p-6 beveled-edge relative overflow-hidden group">
+                  <div className="flex flex-wrap justify-between items-center mb-8 gap-4">
                     <div>
-                      <div className="text-sm font-bold text-white">{r.title}</div>
-                      <div className="text-[10px] text-slate-400">{r.date} • {r.type}</div>
+                      <h2 className="text-white font-headline font-bold text-lg tracking-tight">Temporal Flux (24h)</h2>
+                      <p className="text-[#13ec92] text-[10px] font-bold uppercase tracking-[0.2em]">Live Telemetry Monitor • {smogTab}</p>
+                    </div>
+                    <div className="flex bg-[#020808]/60 p-1 rounded-xl border border-white/10 items-center">
+                      <div className="px-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-r border-white/10 mr-1">Sensor Map:</div>
+                      {['PM2.5', 'PM10', 'NO2'].map(t => (
+                        <button
+                          key={t}
+                          onClick={() => setSmogTab(t)}
+                          className={`px-4 py-1.5 text-[10px] font-label font-black uppercase tracking-widest rounded-lg transition-all ${smogTab === t ? 'bg-[#13ec92] text-[#020808] shadow-[0_0_15px_rgba(19,236,146,0.3)]' : 'text-slate-400 hover:text-white'}`}
+                        >
+                          {t}
+                        </button>
+                      ))}
                     </div>
                   </div>
-                  <button className="text-[#13ec92] hover:text-white text-xs font-bold flex items-center gap-1 transition-colors">
-                    <Download className="w-3 h-3" /> Download
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* FOOTER */}
-      <footer className="mt-8 pt-4 border-t border-[#13ec92]/20 flex justify-between items-center text-xs font-medium">
-        <div className="flex items-center gap-2 text-[#13ec92]">
-          <div className="w-2 h-2 rounded-full bg-[#13ec92] animate-pulse"></div>
-          System Operational <span className="text-[#13ec92]/50 ml-2">Last Updated: {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' })} GMT+7</span>
-        </div>
-        <div className="flex gap-4 text-[#13ec92]/70 relative">
-          <button onClick={() => setShowCredits(!showCredits)} className="hover:text-[#13ec92] flex items-center gap-1 transition-colors">
-            <Info className="w-3 h-3" /> Data Sources & Credits
-          </button>
-          {showCredits && (
-            <div className="absolute bottom-full right-0 mb-2 w-80 bg-[#0a2319] border border-[#13ec92]/30 rounded-xl shadow-2xl z-50 p-4">
-              <h3 className="text-[#13ec92] font-bold text-sm mb-3 flex items-center gap-2"><Globe className="w-4 h-4" /> Data Sources</h3>
-              <div className="space-y-2 text-[11px]">
-                <div className="flex items-start gap-2 p-2 bg-[#051c14] rounded-lg">
-                  <span className="text-[#13ec92] font-bold min-w-[60px]">AQI Data</span>
-                  <span className="text-slate-400">Open-Meteo Air Quality API (European AQI, PM2.5, PM10, O₃, NO₂)</span>
-                </div>
-                <div className="flex items-start gap-2 p-2 bg-[#051c14] rounded-lg">
-                  <span className="text-[#13ec92] font-bold min-w-[60px]">Waves</span>
-                  <span className="text-slate-400">Open-Meteo Marine API (wave height, wave period)</span>
-                </div>
-                <div className="flex items-start gap-2 p-2 bg-[#051c14] rounded-lg">
-                  <span className="text-[#13ec92] font-bold min-w-[60px]">Weather</span>
-                  <span className="text-slate-400">Open-Meteo Forecast API (wind, gusts, weather codes)</span>
-                </div>
-                <div className="flex items-start gap-2 p-2 bg-[#051c14] rounded-lg">
-                  <span className="text-[#13ec92] font-bold min-w-[60px]">Tiles</span>
-                  <span className="text-slate-400">OpenWeatherMap (temp, wind, precipitation, clouds overlays)</span>
-                </div>
-                <div className="flex items-start gap-2 p-2 bg-[#051c14] rounded-lg">
-                  <span className="text-[#13ec92] font-bold min-w-[60px]">Map</span>
-                  <span className="text-slate-400">CartoDB Dark Matter tiles via Leaflet</span>
-                </div>
-                <div className="flex items-start gap-2 p-2 bg-[#051c14] rounded-lg">
-                  <span className="text-[#13ec92] font-bold min-w-[60px]">Service</span>
-                  <span className="text-slate-400">Copernicus Atmosphere Monitoring Service (CAMS)</span>
+                  <div className="h-[240px] w-full">
+                    {loading ? (
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-[#13ec92]/50">
+                        <div className="w-8 h-8 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                        <span className="text-[10px] font-black tracking-widest uppercase">Deciphering Packets...</span>
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="colorCamsSmog" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#13ec92" stopOpacity={0.3} />
+                              <stop offset="95%" stopColor="#13ec92" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff0a" vertical={false} />
+                          <XAxis
+                            dataKey="time"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fill: '#64748b', fontSize: 10, fontWeight: 700 }}
+                            dy={10}
+                          />
+                          <YAxis axisLine={false} tickLine={false} tick={false} />
+                          <Tooltip
+                            contentStyle={{ backgroundColor: '#020808d0', backdropFilter: 'blur(12px)', border: '1px solid rgba(19,236,146,0.2)', borderRadius: '12px', padding: '12px' }}
+                            itemStyle={{ color: '#13ec92', fontWeight: 900, textTransform: 'uppercase', fontSize: '12px' }}
+                            labelStyle={{ color: '#fff', fontWeight: 900, marginBottom: '4px', fontSize: '10px' }}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="value"
+                            stroke="#13ec92"
+                            strokeWidth={3}
+                            fillOpacity={1}
+                            fill="url(#colorCamsSmog)"
+                            animationDuration={2000}
+                          />
+                          {(() => {
+                            const nowHr = new Date().getHours().toString().padStart(2, '0') + ':00';
+                            const nowVal = chartData.find(d => d.time === nowHr)?.value;
+                            return nowVal != null ? (
+                              <ReferenceDot x={nowHr} y={nowVal} r={6} fill="#020808" stroke="#13ec92" strokeWidth={2} isFront />
+                            ) : null;
+                          })()}
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="mt-3 pt-2 border-t border-[#13ec92]/10 text-[10px] text-slate-500">
-                All data is retrieved in real-time from public APIs. No data is stored.
+
+              {/* RIGHT HUD: Hotspots & Alerts */}
+              <div className="col-span-12 lg:col-span-3 space-y-6">
+                <div className="glass-panel beveled-edge p-6 flex flex-col h-full bg-[#020808]/40 relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#13ec92]/20 to-transparent"></div>
+
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <h2 className="text-white font-headline font-bold text-sm uppercase tracking-wider">Critical Nodes</h2>
+                      <p className="text-[#13ec92] text-[9px] font-black uppercase tracking-widest mt-1">Satellite Hotspots</p>
+                    </div>
+                    <button
+                      onClick={() => setShowAllHotspots(v => !v)}
+                      className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[#13ec92] text-[9px] font-black uppercase tracking-widest hover:bg-[#13ec92]/10 transition-colors"
+                    >
+                      {showAllHotspots ? 'Compact' : 'Expand'}
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col gap-3 overflow-y-auto max-h-[1000px] scrollbar-hide">
+                    {(showAllHotspots ? displayHotspots : displayHotspots.slice(0, 8)).map((spot, i) => (
+                      <div
+                        key={i}
+                        onClick={() => spot.lat && setSelectedStation({ name: spot.name || spot.city.split(',')[0], country: spot.country || spot.city.split(',')[1]?.trim(), lat: spot.lat, lon: spot.lon })}
+                        className="glass-panel p-4 beveled-edge bg-[#020808] border-white/5 hover:border-[#13ec92]/30 transition-all cursor-pointer group relative overflow-hidden"
+                      >
+                        <div className="absolute inset-y-0 left-0 w-1 transition-all group-hover:w-2" style={{ backgroundColor: spot.color }}></div>
+                        <div className="flex items-center justify-between relative z-10">
+                          <div className="flex items-center gap-4">
+                            <span className="text-[10px] font-headline font-black text-slate-600 tracking-tighter w-4">{spot.rank}</span>
+                            <div>
+                              <div className="text-xs font-headline font-black text-white group-hover:text-[#13ec92] transition-colors">{spot.city}</div>
+                              <div className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">{spot.category}</div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-headline font-black tracking-tighter" style={{ color: spot.color }}>
+                              {mapLayer === 'waves' ? `${spot.aqi.toFixed(1)}m` : mapLayer === 'storms' ? `${Math.round(spot.aqi)}km` : spot.aqi}
+                            </div>
+                            <div className="text-[8px] font-black text-slate-600 uppercase tracking-widest">
+                              {mapLayer === 'waves' ? 'Height' : mapLayer === 'storms' ? 'Gusts' : 'AQI'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-8 pt-8 border-t border-white/5 flex flex-col items-center">
+                    <div className="w-full flex justify-between items-center px-4 py-8 rounded-2xl bg-gradient-to-br from-[#13ec92]/10 to-[#0ea5e9]/10 border border-[#13ec92]/20 relative group overflow-hidden">
+                      <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      <div className="relative z-10">
+                        <div className="text-[10px] font-black text-[#13ec92] uppercase tracking-[.3em] mb-1">Global Health Index</div>
+                        <div className="text-2xl font-headline font-black text-white tracking-tighter">84.2% NOMINAL</div>
+                      </div>
+                      <div className="relative z-10 w-12 h-12 rounded-full border border-[#13ec92]/40 flex items-center justify-center">
+                        <Activity className="w-6 h-6 text-[#13ec92] animate-pulse" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
-        </div>
-      </footer>
 
-      {/* DEVELOPER CREDIT */}
-      <div className="mt-4 pt-4 border-t border-[#13ec92]/10 flex flex-col md:flex-row justify-between items-center gap-3 text-[10px]">
-        <div className="flex items-center gap-2">
-          <span className="text-[#13ec92] font-black uppercase tracking-widest">Developed by</span>
-          <span className="text-white font-bold">Tichakorn Rojsiraphisal</span>
-        </div>
-        <div className="flex items-center gap-4 text-slate-500 font-semibold">
-          <a href="https://instagram.com/dxwntichakn" target="_blank" rel="noreferrer" className="hover:text-pink-500 transition-colors flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-pink-500"></span>@dxwntichakn</a>
-          <a href="https://github.com/tidawnroj" target="_blank" rel="noreferrer" className="hover:text-white transition-colors flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-white"></span>@tidawnroj</a>
-          <span className="text-slate-600">© {new Date().getFullYear()} TMD Data</span>
-        </div>
+
+          {/* ANALYSIS TAB */}
+          {activeTab === 'Analysis' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+              <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-6">
+                <h2 className="text-white font-bold text-lg mb-4 flex items-center gap-2"><BarChart3 className="w-5 h-5 text-[#13ec92]" /> Pollutant Comparison</h2>
+                <p className="text-slate-400 text-sm mb-6">Current levels vs WHO guidelines for {selectedStation.name} station</p>
+                <div className="space-y-4">
+                  {[
+                    { label: 'PM2.5', current: currentPm25, limit: 15, unit: 'µg/m³' },
+                    { label: 'PM10', current: currentPm10, limit: 45, unit: 'µg/m³' },
+                    { label: 'O3', current: currentO3, limit: 100, unit: 'µg/m³' },
+                    { label: 'NO2', current: currentNo2, limit: 25, unit: 'µg/m³' }
+                  ].map((p) => {
+                    const pct = Math.min((p.current / p.limit) * 100, 100);
+                    const barColor = pct > 80 ? '#ef4444' : pct > 50 ? '#facc15' : '#13ec92';
+                    return (
+                      <div key={p.label}>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-white font-bold">{p.label}</span>
+                          <span className="text-slate-400">{p.current.toFixed(1)} / {p.limit} {p.unit}</span>
+                        </div>
+                        <div className="h-3 bg-[#051c14] rounded-full overflow-hidden">
+                          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: barColor }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-6">
+                <h2 className="text-white font-bold text-lg mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-[#13ec92]" /> Insights</h2>
+                <div className="space-y-4">
+                  <div className="bg-[#051c14] rounded-xl p-4 border border-[#13ec92]/10">
+                    <div className="text-[#13ec92] text-xs font-bold uppercase mb-2">Air Quality Rating</div>
+                    <div className="text-3xl font-black text-white mb-1">{aqiStatus}</div>
+                    <p className="text-slate-400 text-sm">European AQI index value: {currentAQI}</p>
+                  </div>
+                  <div className="bg-[#051c14] rounded-xl p-4 border border-[#13ec92]/10">
+                    <div className="text-[#13ec92] text-xs font-bold uppercase mb-2">Key Pollutant</div>
+                    <div className="text-lg font-bold text-white mb-1">{currentPm25 > currentNo2 ? 'PM2.5' : 'NO2'} is dominant</div>
+                    <p className="text-slate-400 text-sm">Value: {Math.max(currentPm25, currentNo2).toFixed(1)} µg/m³</p>
+                  </div>
+                  <div className="bg-[#051c14] rounded-xl p-4 border border-[#13ec92]/10">
+                    <div className="text-[#13ec92] text-xs font-bold uppercase mb-2">Hotspot Alert</div>
+                    <div className="text-lg font-bold text-white mb-1">{displayHotspots[0]?.city || 'N/A'}</div>
+                    <p className="text-slate-400 text-sm">Highest AQI: {displayHotspots[0]?.aqi || 0}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* REPORTS TAB */}
+          {activeTab === 'Reports' && (
+            <div className="animate-fade-in">
+              <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-6 mb-6">
+                <h2 className="text-white font-bold text-lg mb-2 flex items-center gap-2"><FileText className="w-5 h-5 text-[#13ec92]" /> Latest Reports</h2>
+                <p className="text-slate-400 text-sm mb-6">Generated from live API data</p>
+                <div className="space-y-3">
+                  {[
+                    { title: 'European Air Quality Summary', date: new Date().toLocaleDateString(), type: 'PDF' },
+                    { title: `Paris Station Report – AQI ${currentAQI}`, date: new Date().toLocaleDateString(), type: 'CSV' },
+                    { title: 'Hotspot Analysis – Top 5 Cities', date: new Date().toLocaleDateString(), type: 'PDF' },
+                    { title: 'PM2.5 / PM10 Trend Report (24h)', date: new Date().toLocaleDateString(), type: 'CSV' }
+                  ].map((r, i) => (
+                    <div key={i} className="flex items-center justify-between p-4 bg-[#051c14] rounded-xl border border-[#13ec92]/10 hover:border-[#13ec92]/30 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-[#13ec92]/10 rounded-lg"><FileText className="w-4 h-4 text-[#13ec92]" /></div>
+                        <div>
+                          <div className="text-sm font-bold text-white">{r.title}</div>
+                          <div className="text-[10px] text-slate-400">{r.date} • {r.type}</div>
+                        </div>
+                      </div>
+                      <button className="text-[#13ec92] hover:text-white text-xs font-bold flex items-center gap-1 transition-colors">
+                        <Download className="w-3 h-3" /> Download
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* FOOTER */}
+          <CopernicusFooter />
+        </main>
       </div>
     </div>
+  );
+}
+
+// Merged into OceanSpatialDashboard
+
+
+function CopernicusFooter() {
+  const [time, setTime] = useState(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' }));
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTime(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' }));
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <footer className="mt-8 pt-8 pb-8 border-t border-[#13ec92]/10 flex flex-col md:flex-row justify-between items-center gap-8 text-xs font-medium">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-3 text-left">
+          <div className="size-8 rounded-lg bg-[#13ec92]/10 flex items-center justify-center border border-[#13ec92]/20 shadow-[0_0_15px_rgba(19,236,146,0.1)]">
+            <span className="material-symbols-outlined text-[#13ec92] text-lg">waves</span>
+          </div>
+          <div>
+            <div className="text-white font-black tracking-tighter">COPERNICUS MODULE</div>
+            <div className="text-[#13ec92]/50 text-[10px] uppercase tracking-widest font-black">Open Research Hub</div>
+          </div>
+        </div>
+        <p className="text-slate-500 max-w-xs leading-relaxed text-left">
+          The Copernicus module provides global-scale environmental data analysis for climate monitoring and scientific research.
+        </p>
+      </div>
+
+      <div className="flex flex-col items-center md:items-end gap-6 md:text-right">
+        <div className="flex items-center gap-6">
+          <div className="flex flex-col items-end">
+            <span className="text-[#13ec92]/40 uppercase tracking-[0.2em] text-[10px] font-black mb-1">Node Status</span>
+            <div className="flex items-center gap-2 text-[#13ec92] font-black uppercase text-[11px]">
+              <span className="size-1.5 rounded-full bg-[#13ec92] animate-pulse"></span>
+              Secure System
+            </div>
+          </div>
+          <div className="w-px h-8 bg-[#13ec92]/10"></div>
+          <div className="flex flex-col items-end">
+            <span className="text-[#13ec92]/40 uppercase tracking-[0.2em] text-[10px] font-black mb-1">Local Time</span>
+            <div className="text-white font-black text-xs">{time} <span className="text-[#13ec92]/50 ml-1">GMT+7</span></div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-8 text-slate-500 uppercase tracking-widest font-black text-[9px]">
+          <span className="hover:text-[#13ec92] cursor-default transition-colors">v4.2.0-STABLE</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[#13ec92] font-black uppercase">By</span>
+            <span className="text-white font-bold">Tichakorn R.</span>
+          </div>
+          <span className="hover:text-[#13ec92] cursor-default transition-colors">© {new Date().getFullYear()} TMD</span>
+        </div>
+      </div>
+    </footer>
   );
 }
 

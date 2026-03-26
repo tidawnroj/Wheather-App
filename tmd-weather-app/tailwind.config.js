@@ -7,10 +7,18 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['"Space Grotesk"', 'sans-serif'],
+      },
       colors: {
         'brand-blue': '#1e3a8a',
         'brand-dark': '#0f172a',
         'brand-glass': 'rgba(255, 255, 255, 0.1)',
+        "primary": "#13ec92",
+        "background-light": "#f6f8f7",
+        "background-dark": "#051c14",
+        "neutral-dark": "#0a2a1f",
+        "glass-bg": "rgba(10, 42, 31, 0.7)",
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out',
