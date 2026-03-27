@@ -220,7 +220,7 @@ function OceanAnomaliesDashboard({ data, loading, overlayType, activeArea, scsiH
       <main className="flex-1 overflow-y-auto p-12 flex flex-col copernicus-page-enter">
         <header className="mb-12">
           <h1 className="text-4xl font-black mb-2 uppercase tracking-tighter">Oceanic Anomalies</h1>
-          <p className="text-primary/70 font-medium">Historical Time-Series Analysis (CMEMS 1993-2024)</p>
+          <p className="text-emerald-100/40 text-[10px] uppercase font-bold tracking-[0.2em]">Scientific Methodology / CMEMS 1993-2026</p>
         </header>
         {content}
         <div className="flex-1" />
@@ -239,7 +239,7 @@ function MarineDashboard() {
   const [lastSync, setLastSync] = useState(null);
 
   // Data Downloader State
-  const [dlYear, setDlYear] = useState('2024');
+  const [dlYear, setDlYear] = useState('2026');
   const [dlMonth, setDlMonth] = useState('01');
   const [dlArea, setDlArea] = useState('A');
   const [dlData, setDlData] = useState(null);
@@ -247,7 +247,7 @@ function MarineDashboard() {
   const [dlError, setDlError] = useState(null);
 
   // SCSI State
-  const [scsiYear, setScsiYear] = useState('2569'); // 2026 BE
+  const [scsiYear, setScsiYear] = useState('2026');
   const [scsiMonth, setScsiMonth] = useState('02');
   const [scsiLoading, setScsiLoading] = useState(false);
   const [scsiStats, setScsiStats] = useState(null);
@@ -467,7 +467,7 @@ function MarineDashboard() {
     }
   };
 
-  const years = Array.from({ length: 32 }, (_, i) => (2024 - i).toString());
+  const years = Array.from({ length: 34 }, (_, i) => (2026 - i).toString());
   const months = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
   const areas = ['A', 'B', 'Thailand Coastal', 'Andaman Deep'];
 
