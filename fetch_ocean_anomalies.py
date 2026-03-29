@@ -9,11 +9,11 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 # ── Coordinates ──────────────────────────────────────────────────────────────
-# Area A: South China Sea  115°–120.25°E | 15°–20°N
-AREA_A = {'lon_min': 115.0, 'lon_max': 120.25, 'lat_min': 15.0, 'lat_max': 20.0}
+# Area A: 99°–105° E, 5°–14° N
+AREA_A = {'lon_min': 99.0, 'lon_max': 105.0, 'lat_min': 5.0, 'lat_max': 14.0}
 
-# Area B: Indian Ocean     49°–105°E | 5°–14°N
-AREA_B = {'lon_min': 49.0,  'lon_max': 105.0,  'lat_min': 5.0,  'lat_max': 14.0}
+# Area B: 115°–120.25° E, 16°–19° N
+AREA_B = {'lon_min': 115.0, 'lon_max': 120.25, 'lat_min': 16.0, 'lat_max': 19.0}
 
 # ── Google Sheets Config ──────────────────────────────────────────────────────
 CREDENTIALS_FILE = "credentials/credentials.json"
@@ -84,7 +84,7 @@ def push_scsi_summary_to_sheets(client, summary_df):
             
         # Prepare data: Header + Rows
         # The summary_df index is 'date' (%Y-%m)
-        header = ["Date", "Xa", "Sa", "nA", "Xb", "Sb", "nB", "Sp", "DAB", "SCSI"]
+        header = ["Date", "Xa", "Sa", "nA", "Xb", "Sb", "nB", "Sp", "DAB", "SCSI", "PC2"]
         rows = [header]
         
         # summary_df columns might vary, let's ensure we pull what we need
@@ -101,9 +101,10 @@ def push_scsi_summary_to_sheets(client, summary_df):
                 round(float(row.get('Xb', 0)), 5),
                 round(float(row.get('Sb', 0)), 5),
                 int(row.get('nB', 0)) if not pd.isna(row.get('nB')) else 0,
-                round(float(row.get('Sp', 0)), 0) if not pd.isna(row.get('Sp')) else 0, # Sp is often very large count? No, Sp is pooled sigma.
+                round(float(row.get('Sp', 0)), 5) if not pd.isna(row.get('Sp')) else 0,
                 round(float(row.get('DAB', 0)), 5),
-                round(float(scsi_val), 5)
+                round(float(scsi_val), 5),
+                round(float(row.get('PC2', 0)), 5)
             ])
             
         # Overwrite the entire tab to keep it clean and sorted
@@ -164,10 +165,14 @@ def push_spatial_grids_to_sheets(client, ds_ssh, area_name, area_bounds):
                 except (ValueError, IndexError):
                     print(f"  [GS] Skipping unrecognized tab format: {title}")
 
-        # 4. Upload LATEST month grid
-        if latest_ws_title in [ws.title for ws in spreadsheet.worksheets()]:
-            print(f"  [GS] Tab '{latest_ws_title}' already exists/updated.")
-            return
+        # 4. Upload LATEST month grid (OVERWRITE if exists to ensure new coords)
+        if latest_ws_title in existing_wss_titles:
+            print(f"  [GS] Tab '{latest_ws_title}' already exists. Overwriting...")
+            ws = spreadsheet.worksheet(latest_ws_title)
+            ws.clear()
+        else:
+            print(f"  [GS] Creating new grid tab: {latest_ws_title}")
+            ws = spreadsheet.add_worksheet(title=latest_ws_title, rows=200, cols=100)
 
         print(f"  [GS] Uploading fresh grid for {latest_ws_title} (Resolution: 0.25 deg) ...")
         # DOWNSAMPLE: Every 2nd point (0.125 * 2 = 0.25 deg resolution)
@@ -176,6 +181,8 @@ def push_spatial_grids_to_sheets(client, ds_ssh, area_name, area_bounds):
         lons = grid_2d.longitude.values
         vals = grid_2d.values
         
+        print(f"  [DEBUG] Area {area_name} grid bounds: Lat {lats.min():.3f}-{lats.max():.3f}, Lon {lons.min():.3f}-{lons.max():.3f}")
+
         header = [r"Lat \ Lon"] + [f"{lon:.3f}" for lon in lons]
         rows = [header]
         for lat_idx, lat in enumerate(lats):
@@ -185,7 +192,6 @@ def push_spatial_grids_to_sheets(client, ds_ssh, area_name, area_bounds):
                 row.append("" if np.isnan(v) else round(float(v), 5))
             rows.append(row)
             
-        ws = spreadsheet.add_worksheet(title=latest_ws_title, rows=len(rows)+10, cols=len(header)+10)
         ws.update(values=rows, value_input_option="USER_ENTERED")
         
     except Exception as e:
@@ -354,12 +360,61 @@ def main():
         # Monthly difference
         scsi_df['DAB'] = scsi_df['Xa'] - scsi_df['Xb']
 
-        # SCSI = (DAB - mean(DAB)) / Sp
+        # Compute final SCSI index (Normalized by long-term historical S.D. to get -3 to 3 range)
         DAB_mean = scsi_df['DAB'].mean()
-        scsi_df['SCSI'] = (scsi_df['DAB'] - DAB_mean) / scsi_df['Sp']
+        DAB_std  = scsi_df['DAB'].std()
+        scsi_df['SCSI'] = (scsi_df['DAB'] - DAB_mean) / DAB_std
 
-        # Merge SCSI column back into main CSV
+        # ── PC2 (EOF-2 Proxy) Calculation ────────────────────────────────────────
+        # PC2 represents the contrast mode (EOF-2). We approximate this by
+        # performing PCA on the [Xa, Xb] time series using numpy.
+        try:
+            # Prepare data for PCA: [Area A Mean, Area B Mean]
+            valid_cols = scsi_df[['Xa', 'Xb']].dropna()
+            if not valid_cols.empty:
+                # 1. Standardize (Center and Scale)
+                data_norm = (valid_cols - valid_cols.mean()) / valid_cols.std()
+                X = data_norm.values
+                
+                # 2. Covariance Matrix
+                cov_matrix = np.cov(X.T)
+                
+                # 3. Eigen-decomposition
+                eigenvalues, eigenvectors = np.linalg.eig(cov_matrix)
+                
+                # 4. Sort by eigenvalues (descending)
+                idx = eigenvalues.argsort()[::-1]
+                eigenvectors = eigenvectors[:, idx]
+                
+                # 5. Project data onto principal components
+                projected = X.dot(eigenvectors)
+                
+                # PC2 is typically the contrast mode (EOF-2)
+                pc2_raw = projected[:, 1]
+                
+                # ENSURE POSITIVE CORRELATION WITH SCSI
+                # If PC2 is inversely correlated with the contrast (Xa-Xb), flip it.
+                # SCSI is essentially normalized (Xa-Xb).
+                scsi_temp = scsi_df.loc[valid_cols.index, 'SCSI']
+                correlation = np.corrcoef(scsi_temp, pc2_raw)[0, 1]
+                if correlation < 0:
+                    print(f"  [PCA] Flipping PC2 sign (Correlation was {correlation:.3f})")
+                    pc2_raw = -pc2_raw
+                
+                # Normalize PC2 for consistent visual range (-3 to 3)
+                pc2_norm = (pc2_raw - pc2_raw.mean()) / pc2_raw.std()
+                scsi_df.loc[valid_cols.index, 'PC2'] = pc2_norm
+            else:
+                scsi_df['PC2'] = 0.0
+        except Exception as e:
+            print(f"PCA calculation failed: {e}")
+            scsi_df['PC2'] = 0.0
+        # ─────────────────────────────────────────────────────────────────────────
+
+        print("\n[Result] Latest SCSI values:")
+        print(scsi_df[['SCSI', 'PC2']].tail())
         final_df['SCSI'] = scsi_df['SCSI']
+        final_df['PC2'] = scsi_df['PC2'] # Add PC2 to final_df
 
         print(f"\n  SCSI Stats (spatially correct):")
         print(f"  nA (avg grid cells/month): {scsi_df['nA'].mean():.0f}")
