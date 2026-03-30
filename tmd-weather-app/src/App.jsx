@@ -55,7 +55,7 @@ import {
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, ReferenceDot, ReferenceLine, Cell
 } from 'recharts'
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMapEvents, useMap, Rectangle, ZoomControl, ImageOverlay, Polygon } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMapEvents, useMap, Rectangle, ZoomControl, ImageOverlay, Polygon, GeoJSON, Pane } from 'react-leaflet'
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
@@ -75,6 +75,16 @@ import './index.css'
 
 // --- SUBSYSTEM 1: EARTH HEATMAP (SPATIAL ANALYSIS) ---
 function EarthHeatmapView({ overlayType, setOverlayType, activeArea, setActiveArea, isNested = false }) {
+  const [geoData, setGeoData] = useState(null);
+
+  useEffect(() => {
+    // Fetch simplified world land GeoJSON to use as a mask
+    fetch('https://raw.githubusercontent.com/datasets/geo-boundaries-world-110m/master/countries.geojson')
+      .then(res => res.json())
+      .then(data => setGeoData(data))
+      .catch(err => console.error("Error loading land mask:", err));
+  }, []);
+
   const content = (
     <div className={isNested ? "relative z-10 w-full" : "bg-background-dark/50 backdrop-blur-xl rounded-[2.5rem] p-6 md:p-8 border border-primary/10 shadow-2xl relative z-10 w-full max-w-6xl mx-auto"}>
       <div className="relative aspect-[16/9] md:aspect-[21/9] rounded-2xl overflow-hidden border border-primary/20 bg-[#020b08] flex items-center justify-center group shadow-inner">
@@ -87,18 +97,49 @@ function EarthHeatmapView({ overlayType, setOverlayType, activeArea, setActiveAr
           maxBounds={[[-90, -180], [90, 180]]}
           maxBoundsViscosity={1.0}
         >
-          <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" noWrap={true} bounds={[[-90, -180], [90, 180]]} />
-          <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}" noWrap={true} bounds={[[-90, -180], [90, 180]]} />
-          <ZoomControl position="bottomright" />
-          {overlayType !== 'SCSI' && (
-            <ImageOverlay
-              url={overlayType === 'SSTA' ? "/copernicus_live_heatmap_ssta.png" : "/copernicus_live_heatmap_ssha.png"}
-              bounds={[[-85.0511, -180], [85.0511, 180]]}
-              opacity={0.7}
-              zIndex={10}
-            />
-          )}
+          {/* Layer 1: Base Map (Bottom) */}
+          <TileLayer 
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" 
+            noWrap={true} 
+            bounds={[[-90, -180], [90, 180]]} 
+          />
+          
+          {/* Layer 2: Heatmap Overlay (Middle) */}
+          <Pane name="heatmap-pane" style={{ zIndex: 300 }}>
+            {overlayType !== 'SCSI' && (
+              <ImageOverlay
+                url={overlayType === 'SSTA' ? "/copernicus_live_heatmap_ssta.png" : "/copernicus_live_heatmap_ssha.png"}
+                bounds={[[-85.0511, -180], [85.0511, 180]]}
+                opacity={0.7}
+              />
+            )}
+          </Pane>
 
+          {/* Layer 3: Land Mask (Ensures land is over heatmap but under borders) */}
+          <Pane name="land-mask-pane" style={{ zIndex: 310 }}>
+             {geoData && (
+                <GeoJSON 
+                  data={geoData} 
+                  style={{
+                    fillColor: "#051c14",
+                    fillOpacity: 1,
+                    color: "rgba(255,255,255,0.15)",
+                    weight: 0.8
+                  }} 
+                />
+             )}
+          </Pane>
+
+          {/* Layer 4: Borders & Labels (Top) */}
+          <Pane name="reference-pane" style={{ zIndex: 400 }}>
+            <TileLayer 
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}" 
+              noWrap={true} 
+              bounds={[[-90, -180], [90, 180]]} 
+            />
+          </Pane>
+          
+          <ZoomControl position="bottomright" />
         </MapContainer>
 
 
@@ -106,7 +147,10 @@ function EarthHeatmapView({ overlayType, setOverlayType, activeArea, setActiveAr
         <div className="absolute bottom-6 left-6 right-6 z-20 pointer-events-none flex items-end">
           <div className="flex flex-col gap-1 w-full">
             <div className="flex items-center gap-4">
-              <h3 className="text-xl font-black text-white drop-shadow-md uppercase tracking-tight">Spatial Distribution (Real-Time)</h3>
+              <h3 className="text-xl font-black text-white drop-shadow-md uppercase tracking-tight flex items-center gap-3">
+                Spatial Distribution
+                <span className="text-[10px] text-[#13ec92]/50 font-bold normal-case tracking-normal px-2 py-0.5 rounded-full border border-[#13ec92]/20 bg-black/40">Last Updated: Mar 26, 2026</span>
+              </h3>
               <div className="pointer-events-auto flex gap-1 p-0.5 bg-black/40 backdrop-blur-md rounded-lg border border-white/10 scale-90 origin-left">
                 <button 
                   onClick={() => setOverlayType('SSHA')} 
@@ -193,7 +237,10 @@ function OceanAnomaliesDashboard({ data, loading, overlayType, activeArea, scsiH
       <header className="mb-8 flex justify-between items-center">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h3 className="text-2xl font-black text-white tracking-tight uppercase tracking-widest">Temporal Analytics (1993 - Present)</h3>
+            <h3 className="text-2xl font-black text-white tracking-tight uppercase tracking-widest flex items-center gap-4">
+              Temporal Analytics (1993 - Present)
+              <span className="text-xs text-[#13ec92]/50 font-bold normal-case tracking-normal px-2 py-1 rounded-full border border-[#13ec92]/10 bg-black/40 backdrop-blur-sm">Last Synced: Mar 29, 2026 (thru Mar)</span>
+            </h3>
             <p className="text-slate-400 text-sm mt-1">Multi-decade record for <span className="text-[#13ec92] font-bold">SCSI Index</span></p>
           </div>
           
@@ -960,7 +1007,10 @@ function CopernicusDataHubHeader({ active }) {
 
   return (
     <nav className="fixed top-6 left-1/2 -translate-x-1/2 w-[90%] max-w-5xl rounded-full border border-primary/20 px-6 py-3 bg-emerald-950/70 backdrop-blur-2xl flex justify-between items-center z-[1000] shadow-[0_0_40px_rgba(19,236,146,0.05)]">
-      <div className="text-primary font-black tracking-tighter text-xl font-headline">Copernicus</div>
+      <div className="flex items-center gap-3">
+        <img src="/logo.png" alt="Logo" className="size-8 rounded-full border border-[#13ec92]/20" />
+        <div className="text-primary font-black tracking-tighter text-xl font-headline">Copernicus</div>
+      </div>
 
       <div className="hidden md:flex items-center gap-8">
         {navItems.map((item) => {

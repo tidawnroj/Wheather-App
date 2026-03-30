@@ -1,6 +1,6 @@
-venv/
-__pycache__/
-*.csv
+# venv/
+# __pycache__/
+# raw_api_response.json
 raw_api_response.json
 credentials/
 .DS_Store
