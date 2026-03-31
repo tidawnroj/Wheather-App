@@ -50,7 +50,10 @@ import {
   Table2,
   Loader2,
   Compass,
-  ShieldAlert
+  ShieldAlert,
+  Play,
+  Pause,
+  RotateCcw
 } from 'lucide-react'
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, ReferenceDot, ReferenceLine, Cell
@@ -74,18 +77,31 @@ import './index.css'
 // === NEW COMPONENTS FOR COPERNICUS ===
 
 // --- SUBSYSTEM 1: EARTH HEATMAP (SPATIAL ANALYSIS) ---
-function EarthHeatmapView({ overlayType, setOverlayType, activeArea, setActiveArea, isNested = false }) {
-  const [geoData, setGeoData] = useState(null);
+function EarthHeatmapView({ 
+  overlayType, 
+  setOverlayType, 
+  activeArea, 
+  setActiveArea, 
+  isNested = false,
+  animationIndex,
+  setAnimationIndex,
+  isAnimating,
+  setIsAnimating,
+  animationMetadata,
+  isAnimationModalOpen,
+  setIsAnimationModalOpen,
+  geoData,
+  playbackSpeed = 1,
+  setPlaybackSpeed
+}) {
+  const [isConsoleHovered, setIsConsoleHovered] = useState(false);
+  const activeAnimation = animationMetadata ? animationMetadata[overlayType.toLowerCase()] : null;
+  const currentFrame = activeAnimation?.frames[animationIndex];
+  const overlayUrl = isAnimating || animationIndex < 11 
+    ? currentFrame?.url 
+    : (overlayType === 'SSTA' ? "/copernicus_live_heatmap_ssta.png" : "/copernicus_live_heatmap_ssha.png");
 
-  useEffect(() => {
-    // Fetch simplified world land GeoJSON to use as a mask
-    fetch('https://raw.githubusercontent.com/datasets/geo-boundaries-world-110m/master/countries.geojson')
-      .then(res => res.json())
-      .then(data => setGeoData(data))
-      .catch(err => console.error("Error loading land mask:", err));
-  }, []);
-
-  const content = (
+  const mapContent = (
     <div className={isNested ? "relative z-10 w-full" : "bg-background-dark/50 backdrop-blur-xl rounded-[2.5rem] p-6 md:p-8 border border-primary/10 shadow-2xl relative z-10 w-full max-w-6xl mx-auto"}>
       <div className="relative aspect-[16/9] md:aspect-[21/9] rounded-2xl overflow-hidden border border-primary/20 bg-[#020b08] flex items-center justify-center group shadow-inner">
         <MapContainer
@@ -97,113 +113,269 @@ function EarthHeatmapView({ overlayType, setOverlayType, activeArea, setActiveAr
           maxBounds={[[-90, -180], [90, 180]]}
           maxBoundsViscosity={1.0}
         >
-          {/* Layer 1: Base Map (Bottom) */}
-          <TileLayer 
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" 
-            noWrap={true} 
-            bounds={[[-90, -180], [90, 180]]} 
-          />
-          
-          {/* Layer 2: Heatmap Overlay (Middle) */}
+          <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" noWrap={true} bounds={[[-90, -180], [90, 180]]} />
           <Pane name="heatmap-pane" style={{ zIndex: 300 }}>
-            {overlayType !== 'SCSI' && (
-              <ImageOverlay
-                url={overlayType === 'SSTA' ? "/copernicus_live_heatmap_ssta.png" : "/copernicus_live_heatmap_ssha.png"}
-                bounds={[[-85.0511, -180], [85.0511, 180]]}
-                opacity={0.7}
-              />
-            )}
+            <ImageOverlay url={overlayUrl} bounds={[[-85.0511, -180], [85.0511, 180]]} opacity={0.8} />
           </Pane>
-
-          {/* Layer 3: Land Mask (Ensures land is over heatmap but under borders) */}
           <Pane name="land-mask-pane" style={{ zIndex: 310 }}>
-             {geoData && (
-                <GeoJSON 
-                  data={geoData} 
-                  style={{
-                    fillColor: "#051c14",
-                    fillOpacity: 1,
-                    color: "rgba(255,255,255,0.15)",
-                    weight: 0.8
-                  }} 
-                />
-             )}
+            {geoData && <GeoJSON data={geoData} style={{ fillColor: "#051c14", fillOpacity: 1, color: "rgba(255,255,255,0.15)", weight: 0.8 }} />}
           </Pane>
-
-          {/* Layer 4: Borders & Labels (Top) */}
           <Pane name="reference-pane" style={{ zIndex: 400 }}>
-            <TileLayer 
-              url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}" 
-              noWrap={true} 
-              bounds={[[-90, -180], [90, 180]]} 
-            />
+            <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}" noWrap={true} bounds={[[-90, -180], [90, 180]]} />
           </Pane>
-          
           <ZoomControl position="bottomright" />
         </MapContainer>
-
 
         <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#051c14] to-transparent pointer-events-none z-10"></div>
         <div className="absolute bottom-6 left-6 right-6 z-20 pointer-events-none flex items-end">
           <div className="flex flex-col gap-1 w-full">
-            <div className="flex items-center gap-4">
-              <h3 className="text-xl font-black text-white drop-shadow-md uppercase tracking-tight flex items-center gap-3">
-                Spatial Distribution
-                <span className="text-[10px] text-[#13ec92]/50 font-bold normal-case tracking-normal px-2 py-0.5 rounded-full border border-[#13ec92]/20 bg-black/40">Last Updated: Mar 26, 2026</span>
-              </h3>
-              <div className="pointer-events-auto flex gap-1 p-0.5 bg-black/40 backdrop-blur-md rounded-lg border border-white/10 scale-90 origin-left">
-                <button 
-                  onClick={() => setOverlayType('SSHA')} 
-                  className={`px-3 py-1 text-[10px] font-black rounded-md transition-all ${overlayType === 'SSHA' ? 'bg-[#13ec92] text-black shadow-[0_0_15px_rgba(19,236,146,0.3)]' : 'text-slate-400 hover:text-white'}`}
-                >
-                  SSHA
-                </button>
-                <button 
-                  onClick={() => setOverlayType('SSTA')} 
-                  className={`px-3 py-1 text-[10px] font-black rounded-md transition-all ${overlayType === 'SSTA' ? 'bg-[#13ec92] text-black shadow-[0_0_15px_rgba(19,236,146,0.3)]' : 'text-slate-400 hover:text-white'}`}
-                >
-                  SSTA
-                </button>
+            <div className="flex items-center justify-between w-full">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-4">
+                  <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-3">
+                    Spatial Distribution
+                    <span className="text-[10px] text-[#13ec92]/50 font-bold normal-case tracking-normal px-2 py-0.5 rounded-full border border-[#13ec92]/20 bg-black/40">
+                      {isAnimating || animationIndex < 11 ? `Historical: ${currentFrame?.timestamp || 'Loading...'}` : 'Real-time Mode'}
+                    </span>
+                  </h3>
+                  <div className="pointer-events-auto flex gap-1 p-0.5 bg-black/40 backdrop-blur-md rounded-lg border border-white/10 scale-90 origin-left">
+                    {['SSHA', 'SSTA'].map(type => (
+                      <button 
+                        key={type}
+                        onClick={() => { setOverlayType(type); if (!isAnimating) setAnimationIndex(11); }} 
+                        className={`px-3 py-1 text-[10px] font-black rounded-md transition-all ${overlayType === type ? 'bg-[#13ec92] text-black shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
-            <p className="text-xs text-slate-300 max-w-xl font-medium">Dominant EOF-2 modes for {overlayType === 'SSTA' ? 'Sea Surface Temperature' : 'Sea Level Height'}.</p>
           </div>
         </div>
       </div>
+    </div>
+  );
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-        <button onClick={() => setActiveArea('A')} className={`p-4 rounded-2xl border transition-all text-left ${activeArea === 'A' ? 'bg-[#13ec92]/10 border-[#13ec92]/40 ring-1 ring-[#13ec92]/20' : 'bg-black/20 border-white/5 opacity-60 hover:opacity-100'}`}>
-          <h4 className="font-bold flex items-center gap-2 text-white">Region A: Gulf of Thailand / Andaman</h4>
-          <p className="text-[10px] text-slate-400 mt-1">99°E-105°E | 5°N-14°N</p>
-        </button>
-        <button onClick={() => setActiveArea('B')} className={`p-4 rounded-2xl border transition-all text-left ${activeArea === 'B' ? 'bg-[#13ec92]/10 border-[#13ec92]/40 ring-1 ring-[#13ec92]/20' : 'bg-black/20 border-white/5 opacity-60 hover:opacity-100'}`}>
-          <h4 className="font-bold flex items-center gap-2 text-white">Region B: South China Sea</h4>
-          <p className="text-[10px] text-slate-400 mt-1">115°E-120.25°E | 16°N-19°N</p>
+  const controlsContent = (
+    <div className={isNested ? "w-full" : "w-full max-w-6xl mx-auto"}>
+      <div className={`w-full flex flex-col md:flex-row items-center gap-6 ${isNested ? 'bg-transparent border-none p-0 shadow-none' : 'bg-black/40 backdrop-blur-xl p-6 rounded-[2rem] border border-white/5 shadow-2xl'}`}>
+        <div className="flex-1 flex flex-col gap-3 w-full">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-black uppercase tracking-[0.2em] text-slate-400">
+              Timeline : <span className="text-white">{animationIndex === 11 ? 'Present' : currentFrame?.timestamp}</span>
+            </span>
+            {animationIndex < 11 && (
+              <button onClick={() => setAnimationIndex(11)} className="text-[10px] font-bold text-[#13ec92] uppercase tracking-widest hover:underline">
+                Return to Real-time
+              </button>
+            )}
+          </div>
+          <div className="relative h-10 flex items-center group/slider">
+            <input 
+              type="range" min="0" max="11" value={animationIndex}
+              onChange={(e) => { setAnimationIndex(parseInt(e.target.value)); setIsAnimating(false); }}
+              className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#13ec92]"
+            />
+          </div>
+        </div>
+
+        <button 
+          onClick={() => setIsAnimationModalOpen(true)}
+          className="shrink-0 group relative flex items-center gap-4 bg-[#13ec92] text-black px-10 py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-sm transition-all shadow-[0_20px_50px_rgba(19,236,146,0.2)] hover:scale-105"
+        >
+          Playback 12 months
+          <Play size={18} fill="currentColor" />
         </button>
       </div>
     </div>
   );
 
-  if (isNested) return content;
+  if (isNested) {
+    return (
+      <div className="flex flex-col gap-6 w-full h-full">
+        {mapContent}
+        {controlsContent}
+      </div>
+    );
+  }
 
-  return (
-    <div className="flex flex-col min-h-screen bg-[#051c14] text-slate-100 selection:bg-[#13ec92]/30 pt-24">
-      <CopernicusDataHubHeader active="marine" />
-      <main className="flex-1 overflow-y-auto p-12 flex flex-col">
-        <header className="mb-12">
-          <h1 className="text-4xl font-black mb-2 uppercase tracking-tighter">Earth Heat Map</h1>
-          <p className="text-primary/70 font-medium">Empirical Orthogonal Function (EOF-2) Surface Analysis</p>
-        </header>
-        {content}
-        <div className="flex-1" />
-        <CopernicusFooter />
-      </main>
-    </div>
-  );
+  return { 
+    map: mapContent, 
+    controls: controlsContent,
+    modal: isAnimationModalOpen && (
+      <div className="fixed inset-0 z-[9999] bg-[#05080f] flex flex-col animate-in fade-in zoom-in-95 duration-500 font-inter">
+        {/* HEADER: Outside the map area */}
+        <div className="h-24 flex items-center justify-between px-10 bg-black/40 backdrop-blur-2xl border-b border-white/5 relative z-50">
+          <div className="flex flex-col min-w-[300px]">
+            <div className="flex items-center gap-2">
+              <div className="size-2 rounded-full bg-[#13ec92] animate-pulse"></div>
+              <span className="text-[10px] font-black text-[#13ec92] uppercase tracking-[0.5em]">Deep Water Analysis: ON</span>
+            </div>
+            <h2 className="text-4xl font-black text-white italic tracking-tighter leading-none mt-1">ANIMATION CONSOLE</h2>
+          </div>
+
+          {/* MINI HUD: Relocated to Header Center */}
+          <div className={`flex flex-col items-center gap-1 transition-all duration-500 pointer-events-none ${isConsoleHovered ? 'opacity-0 -translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100'}`}>
+            <span className="text-3xl font-black text-white italic tracking-tighter uppercase whitespace-nowrap">
+              {currentFrame?.timestamp === 'Present' ? 'MARCH 2026' : currentFrame?.timestamp}
+            </span>
+            <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden border border-white/5 shadow-inner">
+              <div 
+                className="h-full bg-[#13ec92] shadow-[0_0_10px_#13ec92] transition-all duration-300" 
+                style={{ width: `${((animationIndex + 1) / 12) * 100}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6 min-w-[300px] justify-end">
+            <div className="flex flex-col items-end text-right">
+              <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Active Region</span>
+              <span className="text-sm font-black text-white">{activeArea?.name || 'CENTRAL GULF OF THAILAND'}</span>
+            </div>
+            <button 
+              onClick={() => { setIsAnimationModalOpen(false); setIsAnimating(false); }}
+              className="group flex items-center gap-3 px-6 py-3 bg-white/5 hover:bg-red-500/20 border border-white/10 hover:border-red-500/40 rounded-2xl transition-all pointer-events-auto"
+            >
+              <span className="text-xs font-black text-white group-hover:text-red-400">EXIT PLAYER</span>
+              <X size={20} className="text-white/40 group-hover:text-red-400" />
+            </button>
+          </div>
+        </div>
+
+        {/* MAIN CONTENT Area */}
+        <div className="flex-1 relative p-10 overflow-hidden flex flex-col gap-6">
+          <div className="relative flex-1 rounded-[3rem] overflow-hidden border border-white/10 bg-[#05080f] shadow-[0_0_150px_rgba(19,236,146,0.15)] transition-all group-hover/player:border-[#13ec92]/30 isolate">
+            <div className="absolute inset-0 z-0 text-black bg-[#05080f]">
+              <MapContainer
+                center={[15, 100]} 
+                zoom={4} 
+                className="w-full h-full bg-[#05080f]"
+                style={{ background: '#05080f' }}
+                zoomControl={true}
+                dragging={true}
+                scrollWheelZoom={true}
+                minZoom={2}
+                maxZoom={12}
+                maxBounds={[[-85, -180], [85, 180]]}
+                maxBoundsViscosity={1.0}
+              >
+                <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" noWrap={false} bounds={[[-90, -180], [90, 180]]} />
+                <ImageOverlay url={overlayUrl} bounds={[[-85.0511, -180], [85.0511, 180]]} opacity={0.8} />
+                <Pane name="modal-land-mask-pane" style={{ zIndex: 500 }}>
+                  {geoData && <GeoJSON data={geoData} style={{ fillColor: "#051c14", fillOpacity: 1, color: "rgba(255,255,255,0.15)", weight: 0.8 }} />}
+                </Pane>
+              </MapContainer>
+            </div>
+
+            {/* UNIFIED GREEN BOX CONTROL PANEL: Collapsible Folder Tab Design */}
+            <div className="absolute bottom-0 left-8 right-8 z-[1000] group/console pointer-events-none pb-8">
+              <div 
+                onMouseEnter={() => setIsConsoleHovered(true)}
+                onMouseLeave={() => setIsConsoleHovered(false)}
+                className="bg-[#0a0f1e]/95 backdrop-blur-3xl border-2 border-[#13ec92]/30 p-8 rounded-[3.5rem] shadow-[0_0_80px_rgba(19,236,146,0.2)] pointer-events-auto flex flex-col gap-8 transition-all duration-700 ease-in-out hover:border-[#13ec92]/80 translate-y-[calc(100%-12px)] hover:translate-y-0 relative group-hover/console:shadow-[0_0_100px_rgba(19,236,146,0.3)]"
+              >
+                
+                {/* Console Tab Handle (Always Visible) & Glowing Indicator */}
+                <div className="absolute top-0 left-0 right-0 h-12 flex items-center justify-center pointer-events-none">
+                  <div className="flex items-center gap-3 opacity-60 group-hover/console:opacity-0 transition-opacity duration-300">
+                    <div className="flex items-center gap-1 group-hover/console:animate-none animate-pulse">
+                      <ChevronUp size={16} className="text-[#13ec92]" />
+                      <span className="text-[10px] font-black text-[#13ec92] uppercase tracking-[0.8em]">CONTROL CONSOLE</span>
+                      <ChevronUp size={16} className="text-[#13ec92]" />
+                    </div>
+                  </div>
+                  {/* Glowing Border when minimized */}
+                  <div className={`absolute top-0 left-1/4 right-1/4 h-[2px] bg-[#13ec92] blur-sm transition-opacity duration-500 animate-pulse translate-y-[-1px] ${isConsoleHovered ? 'opacity-0' : 'opacity-40'}`}></div>
+                </div>
+
+                {/* Timeline Row */}
+                <div className="flex flex-col gap-4 mt-2">
+                  <div className="flex justify-between items-end px-2">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black text-[#13ec92] uppercase tracking-[0.6em]">Timeline Perspective</span>
+                      <div className="flex items-baseline gap-4 mt-1">
+                        <span className="text-5xl font-black text-white uppercase tracking-tighter tabular-nums">
+                          {currentFrame?.timestamp === 'Present' ? 'MARCH 2026' : currentFrame?.timestamp}
+                        </span>
+                        <div className="flex items-center gap-2 px-3 py-1 bg-[#13ec92]/20 rounded-full border border-[#13ec92]/40">
+                          <div className="size-1.5 rounded-full bg-[#13ec92]"></div>
+                          <span className="text-[10px] font-black text-[#13ec92] uppercase tracking-widest">{animationIndex === 11 ? 'Live Feed' : 'Historical Archive'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 p-1.5 bg-white/5 rounded-2xl border border-white/10">
+                      <button onClick={() => setOverlayType('SSHA')} className={`px-5 py-2.5 text-[11px] font-black rounded-xl transition-all ${overlayType === 'SSHA' ? 'bg-[#13ec92] text-black shadow-lg' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>SSHA</button>
+                      <button onClick={() => setOverlayType('SSTA')} className={`px-5 py-2.5 text-[11px] font-black rounded-xl transition-all ${overlayType === 'SSTA' ? 'bg-[#13ec92] text-black shadow-lg' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>SSTA</button>
+                    </div>
+                  </div>
+
+                  <div className="relative group/seeker px-2">
+                    <input 
+                      type="range" min="0" max="11" value={animationIndex}
+                      onChange={(e) => { setAnimationIndex(parseInt(e.target.value)); setIsAnimating(false); }}
+                      className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#13ec92] hover:h-2.5 transition-all relative z-10"
+                    />
+                    <div className="flex justify-between mt-4 px-1">
+                      {activeAnimation?.frames.map((frame, i) => (
+                        <div key={i} className="flex flex-col items-center gap-2 group/month">
+                          <div className={`w-[2px] h-2 rounded-full transition-all ${i === animationIndex ? 'bg-[#13ec92] h-4' : 'bg-white/20'}`}></div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Playback Controls Row */}
+                <div className="flex items-center justify-between px-2 pt-4 border-t border-white/5">
+                  <div className="flex items-center gap-10">
+                    <button 
+                      onClick={() => setIsAnimating(!isAnimating)}
+                      className="size-20 rounded-full bg-[#13ec92] text-black flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-[0_0_50px_rgba(19,236,146,0.3)]"
+                    >
+                      {isAnimating ? <Pause size={36} fill="currentColor" /> : <Play size={36} fill="currentColor" className="ml-1" />}
+                    </button>
+                    
+                    <div className="flex items-center gap-3 p-1.5 bg-white/10 rounded-2xl border border-white/20 shadow-inner">
+                      {[1, 2, 3].map(speed => (
+                        <button 
+                          key={speed}
+                          onClick={() => setPlaybackSpeed(speed)}
+                          className={`size-12 rounded-xl text-xs font-black transition-all ${playbackSpeed === speed ? 'bg-[#13ec92] text-black shadow-lg scale-105' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
+                        >
+                          {speed}X
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <button onClick={() => setAnimationIndex(0)} className="size-12 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-[#13ec92] hover:text-black transition-all shadow-lg"><RotateCcw size={22} /></button>
+                      <button onClick={() => setAnimationIndex(prev => Math.max(0, prev - 1))} className="size-12 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-[#13ec92] hover:text-black transition-all shadow-lg"><ArrowLeft size={22} /></button>
+                      <button onClick={() => setAnimationIndex(prev => Math.min(11, prev + 1))} className="size-12 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-[#13ec92] hover:text-black transition-all shadow-lg"><ArrowRight size={22} /></button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-6">
+                    <div className="flex flex-col items-end opacity-40">
+                      <span className="text-[10px] font-bold text-white uppercase tracking-widest leading-none">Simulation Status</span>
+                      <span className="text-[10px] font-bold text-[#13ec92] uppercase tracking-[0.3em] mt-1 text-right">Synchronization Ready</span>
+                    </div>
+                    <button onClick={() => { setAnimationIndex(11); setIsAnimating(false); }} className={`px-8 py-4 rounded-2xl border-2 text-xs font-black uppercase tracking-[0.2em] transition-all shadow-xl hover:scale-105 active:scale-95 ${animationIndex === 11 ? 'bg-[#13ec92]/10 border-[#13ec92]/20 text-[#13ec92]/60' : 'bg-[#13ec92]/20 border-[#13ec92]/60 text-[#13ec92] hover:bg-[#13ec92] hover:text-black shadow-[0_0_30px_rgba(19,236,146,0.2)]'}`}>Restore Present</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  };
 }
 
 // --- SUBSYSTEM 2: OCEAN ANOMALIES (TEMPORAL ANALYSIS) ---
-function OceanAnomaliesDashboard({ data, loading, overlayType, activeArea, scsiHistory = [], scsiHistoryLoading = false, isNested = false }) {
+function OceanAnomaliesDashboard({ data, loading, overlayType, activeArea, scsiHistory = [], scsiHistoryLoading = false, isNested = false, animationIndex = 11, isAnimating = false, animationMetadata = null }) {
   // Mode selection removed to simplify - focusing only on SCSI
 
   // Format data for Recharts - ALWAYS SCSI/PC2 now
@@ -214,6 +386,19 @@ function OceanAnomaliesDashboard({ data, loading, overlayType, activeArea, scsiH
       pc2: parseFloat(row.PC2) || 0
     }));
   }, [scsiHistory]);
+
+  // Current Animation Date (for ReferenceLine)
+  const animationDate = useMemo(() => {
+    if (!animationMetadata || !animationMetadata[overlayType.toLowerCase()]) return null;
+    const frames = animationMetadata[overlayType.toLowerCase()].frames;
+    const currentFrame = frames[animationIndex];
+    if (!currentFrame) return null;
+    
+    // Convert "Aug 2024" to "2024-08"
+    const [month, year] = currentFrame.timestamp.split(' ');
+    const monthMap = { Jan:'01', Feb:'02', Mar:'03', Apr:'04', May:'05', Jun:'06', Jul:'07', Aug:'08', Sep:'09', Oct:'10', Nov:'11', Dec:'12' };
+    return `${year}-${monthMap[month]}`;
+  }, [animationIndex, animationMetadata, overlayType]);
 
   // Explicitly calculate years for X-Axis labels
   const yearTicks = useMemo(() => {
@@ -305,6 +490,24 @@ function OceanAnomaliesDashboard({ data, loading, overlayType, activeArea, scsiH
                 fill="url(#oceanGradient)" 
                 animationDuration={1500} 
               />
+
+              {/* Animation Reference Line */}
+              {(isAnimating || animationIndex < 11) && animationDate && (
+                <ReferenceLine
+                  x={animationDate}
+                  stroke="#13ec92"
+                  strokeWidth={2}
+                  strokeDasharray="3 3"
+                  label={{ 
+                    value: 'ACTIVE FRAME', 
+                    position: 'top', 
+                    fill: '#13ec92', 
+                    fontSize: 8, 
+                    fontWeight: 'black', 
+                    letterSpacing: '0.1em' 
+                  }}
+                />
+              )}
             </AreaChart>
           </ResponsiveContainer>
         )}
@@ -355,6 +558,48 @@ function MarineDashboard() {
   const [scsiHistory, setScsiHistory] = useState([]);
   const [scsiHistoryLoading, setScsiHistoryLoading] = useState(true);
 
+  // Animation System State
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [animationIndex, setAnimationIndex] = useState(11);
+  const [animationMetadata, setAnimationMetadata] = useState(null);
+  const [isAnimationModalOpen, setIsAnimationModalOpen] = useState(false);
+  const [geoData, setGeoData] = useState(null);
+  const animationTimerRef = useRef(null);
+
+  useEffect(() => {
+    // Fetch simplified world land GeoJSON to use as a mask
+    fetch('https://raw.githubusercontent.com/datasets/geo-boundaries-world-110m/master/countries.geojson')
+      .then(res => res.json())
+      .then(data => setGeoData(data))
+      .catch(err => console.error("Error loading land mask:", err));
+  }, []);
+
+  useEffect(() => {
+    // Fetch animation metadata
+    fetch('/copernicus_metadata.json')
+      .then(res => res.json())
+      .then(data => {
+        if (data.animations) setAnimationMetadata(data.animations);
+      })
+      .catch(err => console.error("Error loading animation metadata:", err));
+  }, []);
+
+  // Animation Playback Logic
+  useEffect(() => {
+    if (isAnimating) {
+      if (animationTimerRef.current) clearInterval(animationTimerRef.current);
+      animationTimerRef.current = setInterval(() => {
+        setAnimationIndex(prev => (prev + 1) % 12);
+      }, 800 / playbackSpeed);
+    } else if (animationTimerRef.current) {
+      clearInterval(animationTimerRef.current);
+    }
+    return () => {
+      if (animationTimerRef.current) clearInterval(animationTimerRef.current);
+    };
+  }, [isAnimating, playbackSpeed]);
+
   useEffect(() => {
     document.documentElement.classList.add('dark');
     window.scrollTo(0, 0);
@@ -400,6 +645,19 @@ function MarineDashboard() {
   const scrollToTemporal = () => {
     temporalRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
+
+  const { 
+    map: heatmapMap, 
+    controls: heatmapControls, 
+    modal: heatmapModal 
+  } = EarthHeatmapView({
+    overlayType, setOverlayType, activeArea, setActiveArea, 
+    isNested: false, animationIndex, setAnimationIndex, 
+    isAnimating, setIsAnimating, animationMetadata, 
+    isAnimationModalOpen, setIsAnimationModalOpen,
+    geoData,
+    playbackSpeed, setPlaybackSpeed
+  });
 
   const fetchSpatialGrid = (year, month, area) => {
     return new Promise((resolve, reject) => {
@@ -700,57 +958,59 @@ function MarineDashboard() {
 
           </div>
 
-          {/* CENTER HUD: Spatial Distribution */}
+          {/* CENTER HUD: Spatial Distribution & Control Array */}
           <div className="lg:col-span-6 flex flex-col gap-6">
             
-            {/* Unified Spatial Distribution & Scroll Action Panel */}
-            <div className="glass-panel beveled-edge relative rounded-[2.5rem] p-6 md:p-8 border border-white/10 group flex flex-col items-center">
-              <div className="w-full relative rounded-2xl overflow-hidden border border-white/5 bg-[#020b08]/40 shadow-inner">
+            {/* 1. Spatial Map & Integrated Controls Container */}
+            <div className="glass-panel beveled-edge relative rounded-[2.5rem] p-0 overflow-hidden border border-white/10 group flex flex-col min-h-[620px] bg-black/20">
+              <div className="flex-1 w-full relative">
+                {heatmapMap}
                 {/* Scanner Line Effect */}
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#13ec92]/5 to-transparent h-[10%] opacity-50 animate-scan pointer-events-none z-10"></div>
-                
-                <EarthHeatmapView
-                  overlayType={overlayType}
-                  setOverlayType={setOverlayType}
-                  activeArea={activeArea}
-                  setActiveArea={setActiveArea}
-                  isNested={true}
-                />
               </div>
-
-              {/* Repositioned Scroll Hint - Moving closer to analysis */}
-              <div className="mt-8 flex flex-col items-center justify-center gap-4 py-2 animate-bounce-slow cursor-default group relative z-20">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-                  <div className="size-32 rounded-full border border-[#13ec92]/10 animate-sonar"></div>
-                </div>
-                
-                <div className="flex flex-col items-center gap-0.5 relative z-10">
-                  <span className="text-[11px] font-black text-[#13ec92] uppercase tracking-[0.6em] glow-emerald group-hover:text-white transition-colors duration-500">
-                    Initiate Depth Analysis
-                  </span>
-                  <div className="h-[1px] w-12 bg-gradient-to-r from-transparent via-[#13ec92]/50 to-transparent my-1">
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-center -space-y-3 opacity-40 group-hover:opacity-100 transition-all duration-700 transform group-hover:scale-110">
-                  <ChevronDown className="w-7 h-7 text-[#13ec92] glow-emerald" />
-                  <ChevronDown className="w-5 h-5 text-[#13ec92]/60" />
-                  <ChevronDown className="w-3 h-3 text-[#13ec92]/30" />
-                </div>
+              
+              {/* Integrated Playback Control Bar */}
+              <div className="p-8 pb-10 border-t border-white/5 bg-black/20 mt-auto">
+                {heatmapControls}
               </div>
+            </div>
 
-              {/* Scientific Transition Button */}
+            {/* 3. Regional Selection Grid */}
+            <div className="grid grid-cols-2 gap-5 min-h-[140px]">
+              <button 
+                onClick={() => setActiveArea('A')}
+                className={`group relative p-8 rounded-[2.5rem] border transition-all duration-700 overflow-hidden flex flex-col items-center justify-center text-center ${activeArea === 'A' ? 'bg-[#13ec92]/10 border-[#13ec92]/50 shadow-[0_0_50px_rgba(19,236,146,0.15)] ring-1 ring-[#13ec92]/30' : 'bg-black/40 border-white/5 opacity-60 hover:opacity-100 hover:bg-black/60 hover:border-white/20'}`}
+              >
+                <div className={`absolute inset-0 bg-gradient-to-br from-[#13ec92]/10 to-transparent transition-opacity duration-1000 ${activeArea === 'A' ? 'opacity-100' : 'opacity-0'}`}></div>
+                <div className="relative z-10 flex flex-col gap-2">
+                  <h4 className={`font-black text-lg uppercase tracking-[0.2em] transition-all duration-500 scale-90 group-hover:scale-100 ${activeArea === 'A' ? 'text-[#13ec92] glow-emerald' : 'text-slate-500'}`}>Node Alpha</h4>
+                  <p className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.3em] opacity-60 group-hover:opacity-100">Gulf of Thailand / Andaman</p>
+                </div>
+              </button>
+              <button 
+                onClick={() => setActiveArea('B')}
+                className={`group relative p-8 rounded-[2.5rem] border transition-all duration-700 overflow-hidden flex flex-col items-center justify-center text-center ${activeArea === 'B' ? 'bg-[#13ec92]/10 border-[#13ec92]/50 shadow-[0_0_50px_rgba(19,236,146,0.15)] ring-1 ring-[#13ec92]/30' : 'bg-black/40 border-white/5 opacity-60 hover:opacity-100 hover:bg-black/60 hover:border-white/20'}`}
+              >
+                <div className={`absolute inset-0 bg-gradient-to-br from-[#13ec92]/10 to-transparent transition-opacity duration-1000 ${activeArea === 'B' ? 'opacity-100' : 'opacity-0'}`}></div>
+                <div className="relative z-10 flex flex-col gap-2">
+                  <h4 className={`font-black text-lg uppercase tracking-[0.2em] transition-all duration-500 scale-90 group-hover:scale-100 ${activeArea === 'B' ? 'text-[#13ec92] glow-emerald' : 'text-slate-500'}`}>Node Beta</h4>
+                  <p className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.3em] opacity-60 group-hover:opacity-100">South China Sea</p>
+                </div>
+              </button>
+            </div>
+
+            {/* 4. Scientific Context & Action Panel */}
+            <div className="glass-panel beveled-edge p-6 flex items-center justify-between bg-[#13ec92]/5 border-[#13ec92]/10 mt-auto">
+              <div>
+                <p className="text-[10px] font-black text-[#13ec92] uppercase tracking-[0.3em]">EOF-2 Analysis Phase</p>
+                <h4 className="text-white text-sm font-bold uppercase tracking-tighter mt-1">Nodal Cross-Correlation Matrix Stable</h4>
+              </div>
               <button 
                 onClick={scrollToTemporal}
-                className="mt-4 flex flex-col items-center gap-2 px-8 py-3 rounded-full bg-[#13ec92]/5 border border-[#13ec92]/20 hover:bg-[#13ec92]/10 hover:border-[#13ec92]/40 transition-all duration-500 group relative overflow-hidden active:scale-95"
+                className="flex items-center gap-3 px-6 py-3 rounded-xl bg-[#13ec92] text-black font-black uppercase tracking-widest text-[10px] hover:shadow-[0_0_20px_rgba(19,236,146,0.3)] transition-all"
               >
-                <div className="absolute inset-0 bg-[#13ec92]/10 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
-                <span className="text-[10px] font-black text-[#13ec92] uppercase tracking-[0.3em] relative z-10">Explore Temporal Stratum</span>
-                <div className="flex items-center gap-2 relative z-10">
-                  <div className="h-[1px] w-4 bg-[#13ec92]/40 group-hover:w-8 transition-all"></div>
-                  <ChevronDown className="w-3 h-3 text-[#13ec92] group-hover:animate-bounce" />
-                  <div className="h-[1px] w-4 bg-[#13ec92]/40 group-hover:w-8 transition-all"></div>
-                </div>
+                View Temporal Stratum
+                <ChevronDown size={14} />
               </button>
             </div>
 
@@ -899,6 +1159,9 @@ function MarineDashboard() {
               scsiHistory={scsiHistory}
               scsiHistoryLoading={scsiHistoryLoading}
               isNested={true}
+              animationIndex={animationIndex}
+              isAnimating={isAnimating}
+              animationMetadata={animationMetadata}
             />
           </div>
         </div>
@@ -906,6 +1169,9 @@ function MarineDashboard() {
         {/* FOOTER */}
         <CopernicusFooter />
       </main>
+
+      {/* Animation Modal (Root Level) */}
+      {isAnimationModalOpen && heatmapModal}
     </div>
   );
 }
