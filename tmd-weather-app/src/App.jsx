@@ -91,7 +91,7 @@ function EarthHeatmapView({
   isAnimationModalOpen,
   setIsAnimationModalOpen,
   geoData,
-  playbackSpeed = 1,
+  playbackSpeed = 2,
   setPlaybackSpeed
 }) {
   const [isConsoleHovered, setIsConsoleHovered] = useState(false);
@@ -134,10 +134,16 @@ function EarthHeatmapView({
                 <div className="flex items-center gap-4">
                   <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-3">
                     Spatial Distribution
-                    <span className="text-[10px] text-[#13ec92]/50 font-bold normal-case tracking-normal px-2 py-0.5 rounded-full border border-[#13ec92]/20 bg-black/40">
-                      {isAnimating || animationIndex < 11 ? `Historical: ${currentFrame?.timestamp || 'Loading...'}` : 'Real-time Mode'}
+                    <span className="text-[10px] text-[#13ec92] font-black uppercase tracking-[0.2em] px-2.5 py-1 rounded-lg border border-[#13ec92]/30 bg-[#13ec92]/10 animate-pulse">
+                      {isAnimating || animationIndex < 11 ? `Historical Analysis: ${currentFrame?.timestamp || 'Loading...'}` : 'Scientific Live Mode'}
                     </span>
                   </h3>
+                  {overlayType === 'SSTA' && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="size-1.5 rounded-full bg-[#13ec92]"></div>
+                      <span className="text-[9px] font-black text-[#13ec92]/70 uppercase tracking-widest">Baseline: 1991-2020 C3S Standard</span>
+                    </div>
+                  )}
                   <div className="pointer-events-auto flex gap-1 p-0.5 bg-black/40 backdrop-blur-md rounded-lg border border-white/10 scale-90 origin-left">
                     {['SSHA', 'SSTA'].map(type => (
                       <button 
@@ -560,7 +566,7 @@ function MarineDashboard() {
 
   // Animation System State
   const [isAnimating, setIsAnimating] = useState(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [playbackSpeed, setPlaybackSpeed] = useState(2);
   const [animationIndex, setAnimationIndex] = useState(11);
   const [animationMetadata, setAnimationMetadata] = useState(null);
   const [isAnimationModalOpen, setIsAnimationModalOpen] = useState(false);

@@ -1,6 +1,6 @@
 {
     "last_ocean_sync": "2026-03-29 21:34:24",
-    "last_heatmap_sync": "2026-03-26 15:05:00",
+    "last_heatmap_sync": "2026-04-01 19:36:23",
     "overall_status": "Active",
     "animations": {
         "ssha": {
@@ -73,68 +73,68 @@
             "frames": [
                 {
                     "index": 0,
-                    "timestamp": "Apr 2025",
+                    "timestamp": "APR 2025",
                     "url": "/animations/ssta_0.png"
                 },
                 {
                     "index": 1,
-                    "timestamp": "May 2025",
+                    "timestamp": "MAY 2025",
                     "url": "/animations/ssta_1.png"
                 },
                 {
                     "index": 2,
-                    "timestamp": "Jun 2025",
+                    "timestamp": "JUN 2025",
                     "url": "/animations/ssta_2.png"
                 },
                 {
                     "index": 3,
-                    "timestamp": "Jul 2025",
+                    "timestamp": "JUL 2025",
                     "url": "/animations/ssta_3.png"
                 },
                 {
                     "index": 4,
-                    "timestamp": "Aug 2025",
+                    "timestamp": "AUG 2025",
                     "url": "/animations/ssta_4.png"
                 },
                 {
                     "index": 5,
-                    "timestamp": "Sep 2025",
+                    "timestamp": "SEP 2025",
                     "url": "/animations/ssta_5.png"
                 },
                 {
                     "index": 6,
-                    "timestamp": "Oct 2025",
+                    "timestamp": "OCT 2025",
                     "url": "/animations/ssta_6.png"
                 },
                 {
                     "index": 7,
-                    "timestamp": "Nov 2025",
+                    "timestamp": "NOV 2025",
                     "url": "/animations/ssta_7.png"
                 },
                 {
                     "index": 8,
-                    "timestamp": "Dec 2025",
+                    "timestamp": "DEC 2025",
                     "url": "/animations/ssta_8.png"
                 },
                 {
                     "index": 9,
-                    "timestamp": "Jan 2026",
+                    "timestamp": "JAN 2026",
                     "url": "/animations/ssta_9.png"
                 },
                 {
                     "index": 10,
-                    "timestamp": "Feb 2026",
+                    "timestamp": "FEB 2026",
                     "url": "/animations/ssta_10.png"
                 },
                 {
                     "index": 11,
-                    "timestamp": "Mar 2026",
+                    "timestamp": "MAR 2026",
                     "url": "/animations/ssta_11.png"
                 }
             ],
-            "vmin": -2.5,
-            "vmax": 2.5
+            "vmin": -2.0,
+            "vmax": 2.0
         },
-        "last_animation_sync": "2026-03-31 13:41:44"
+        "last_animation_sync": "2026-04-01 19:53:46"
     }
 }

@@ -1,0 +1,61 @@
+/Users/tommy/Dawn's/Wheather App/fetch_ocean_anomalies.py:179: SyntaxWarning: "\ " is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\ "? A raw string is also an option.
+  header = ["Lat \ Lon"] + [f"{lon:.3f}" for lon in lons]
+Warning: COPERNICUS_USERNAME / COPERNICUS_PASSWORD not set.
+Relying on ~/.copernicusmarine/.copernicusmarine-credentials if they exist.
+Opening CMEMS OPeNDAP streams (this may take a minute)...
+INFO - 2026-03-26T14:50:32Z - Selected dataset version: "202411"
+INFO - 2026-03-26T14:50:32Z - Selected dataset part: "default"
+  Loaded SSH dataset: cmems_obs-sl_glo_phy-ssh_my_allsat-l4-duacs-0.125deg_P1M-m
+  Area A grid shape: 1666 valid cells/month (sample)
+  Area B grid shape: 28809 valid cells/month (sample)
+INFO - 2026-03-26T14:52:44Z - Selected dataset version: "202311"
+INFO - 2026-03-26T14:52:44Z - Selected dataset part: "default"
+  Loaded SST dataset: cmems_obs-sst_glo_phy_my_l3s_P1D-m
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/dask/array/numpy_compat.py:61: RuntimeWarning: invalid value encountered in divide
+  x = np.divide(x1, x2, out)
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/dask/array/numpy_compat.py:61: RuntimeWarning: invalid value encountered in divide
+  x = np.divide(x1, x2, out)
+
+Merging into monthly CSV...
+
+  SCSI Stats (spatially correct):
+  nA (avg grid cells/month): 1666
+  nB (avg grid cells/month): 28809
+  Sa (avg spatial S.D. Area A): 0.05496 m
+  Sb (avg spatial S.D. Area B): 0.08444 m
+  Sp (avg pooled S.D.): 0.08320 m
+  DAB_mean: -0.00748 m
+  SCSI range: [-2.251, 2.619]
+
+  Saved main CSV → tmd-weather-app/public/ocean_anomalies_history.csv
+
+Authenticating with Google Sheets...
+
+Pushing SCSI Summary table (monthly stats from 1993 onwards)...
+               Xa        Sa      nA  ...        Sp       DAB      SCSI
+date                                 ...                              
+1993-01 -0.139579  0.043782  1666.0  ...  0.088146 -0.167442 -1.814691
+1993-02 -0.161241  0.039046  1666.0  ...  0.082664 -0.165469 -1.911174
+1993-03 -0.135572  0.048133  1666.0  ...  0.077364 -0.152964 -1.880445
+1993-04 -0.113916  0.044124  1666.0  ...  0.068149 -0.144708 -2.013588
+1993-05 -0.053561  0.042126  1666.0  ...  0.068530 -0.095439 -1.283439
+
+[5 rows x 9 columns]
+  [GS] Connected to Sheet for SCSI Summary
+  [GS] Successfully updated 'SCSI_SUMMARY' with 391 months.
+
+Managing Spatial Grids (Keeping latest month, purging old ones)...
+  [GS] Managing Grid Tabs for Area A
+  [GS] Target latest tab: 2025-07_Area_A
+  [GS] Tab '2025-07_Area_A' already exists/updated.
+  [GS] Managing Grid Tabs for Area B
+  [GS] Target latest tab: 2025-07_Area_B
+  [GS] Tab '2025-07_Area_B' already exists/updated.
+  Updated metadata → tmd-weather-app/public/copernicus_metadata.json
+         Area_A_SSTA  Area_B_SSTA  Area_A_SSHA  Area_B_SSHA  SCSI
+date                                                             
+2025-09   302.309373   300.649924          NaN          NaN   NaN
+2025-10   302.063199   301.473023          NaN          NaN   NaN
+2025-11   300.613263   301.383038          NaN          NaN   NaN
+2025-12   299.532452   301.058220          NaN          NaN   NaN
+2026-01   298.802194   300.676508          NaN          NaN   NaN
