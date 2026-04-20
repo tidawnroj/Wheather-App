@@ -3357,9 +3357,6 @@ function CamsDashboard() {
                     </div>
                     <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${showStationPicker ? 'rotate-180 text-blue-600' : ''}`} />
                   </button>
-                </div>showStationPicker ? 'rotate-180 text-[#13ec92]' : ''}`} />
-                  </button>
-
                 </div>
 
                 {/* Main AQI White Card */}
