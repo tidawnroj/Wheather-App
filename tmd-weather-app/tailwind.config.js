@@ -11,6 +11,7 @@ export default {
         headline: ['"Space Grotesk"', 'sans-serif'],
         body: ['"Manrope"', 'sans-serif'],
         label: ['"Inter"', 'sans-serif'],
+        inter: ['"Inter"', 'sans-serif'],
       },
       colors: {
         "tertiary-container": "#cf69fd",

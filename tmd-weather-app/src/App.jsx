@@ -1940,7 +1940,7 @@ function App() {
 
   return (
     <div className={`${isDarkMode ? 'dark' : ''}`}>
-      <div className={`min-h-screen ${isCopernicusPage ? 'bg-[#051c14]' : 'bg-[#f5f7fa] dark:bg-[#000000]'} text-slate-900 dark:text-white font-sans selection:bg-blue-500/30 overflow-x-hidden relative transition-colors duration-500 flex flex-col`}>
+      <div className={`min-h-screen ${isCopernicusPage ? 'bg-slate-50' : 'bg-[#f5f7fa] dark:bg-[#000000]'} text-slate-900 dark:text-white font-sans selection:bg-blue-500/30 overflow-x-hidden relative transition-colors duration-500 flex flex-col`}>
 
         {/* Ambient Left Background Blob matches the design */}
         {!isCopernicusPage && <div className="absolute top-0 left-0 w-[500px] lg:w-[800px] h-[600px] lg:h-[800px] bg-gradient-to-br from-blue-300/40 to-blue-500/10 dark:from-blue-600/20 dark:to-transparent rounded-full blur-[80px] lg:blur-[120px] -translate-x-1/2 -translate-y-1/4 pointer-events-none z-0"></div>}
@@ -2648,19 +2648,19 @@ function App() {
           {/* Copernicus Landing Page Route */}
           <Route path="/copernicus" element={<CopernicusPortal />} />
           <Route path="/copernicus/cams" element={
-            <div className="flex flex-col bg-[#051c14] min-h-screen pt-24">
+            <div className="flex flex-col bg-slate-50 min-h-screen pt-24">
               <CopernicusDataHubHeader active="cams" />
               <div className="flex-1 overflow-hidden"><CamsDashboard /></div>
             </div>
           } />
           <Route path="/copernicus/marine" element={
-            <div className="flex flex-col bg-[#10221a] min-h-screen pt-24">
+            <div className="flex flex-col bg-slate-50 min-h-screen pt-24">
               <CopernicusDataHubHeader active="marine" />
               <div className="flex-1 overflow-hidden"><MarineDashboard /></div>
             </div>
           } />
           <Route path="/copernicus/credits" element={
-            <div className="flex flex-col bg-[#0a1c12] min-h-screen pt-24">
+            <div className="flex flex-col bg-slate-50 min-h-screen pt-24">
               <CopernicusDataHubHeader active="credits" />
               <div className="flex-1 overflow-hidden"><CreditsView /></div>
             </div>
@@ -3267,10 +3267,10 @@ function CamsDashboard() {
 
   if (!selectedStation) {
     return (
-      <div className="bg-[#051c14] min-h-screen font-['Space_Grotesk'] text-slate-100 flex items-center justify-center" style={{ background: '#051c14' }}>
+      <div className="bg-slate-50 min-h-screen font-inter text-slate-900 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-[#13ec92]/30 border-t-[#13ec92] rounded-full animate-spin"></div>
-          <p className="text-[#13ec92] font-bold animate-pulse">Detecting nearest station...</p>
+          <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
+          <p className="text-blue-600 font-bold animate-pulse">Detecting nearest station...</p>
         </div>
       </div>
     );
