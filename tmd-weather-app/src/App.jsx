@@ -3337,6 +3337,8 @@ function CamsDashboard() {
         <main className="flex-1 p-6 lg:p-8 max-w-[1600px] mx-auto w-full space-y-8 pb-20">
           {activeTab === 'Overview' && (
             <div className="grid grid-cols-12 gap-8 animate-fade-in">
+              {/* LEFT COLUMN: Statistics & Sensors */}
+              <div className="col-span-12 lg:col-span-3 space-y-8">
 
                         {/* Station Picker White Card */}
                 <div className="bg-white p-5 rounded-3xl border border-slate-200 relative overflow-hidden group shadow-sm">
@@ -3720,9 +3722,9 @@ function CamsDashboard() {
           {/* ANALYSIS TAB */}
           {activeTab === 'Analysis' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
-              <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-6">
-                <h2 className="text-white font-bold text-lg mb-4 flex items-center gap-2"><BarChart3 className="w-5 h-5 text-[#13ec92]" /> Pollutant Comparison</h2>
-                <p className="text-slate-400 text-sm mb-6">Current levels vs WHO guidelines for {selectedStation.name} station</p>
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                <h2 className="text-slate-900 font-headline font-bold text-lg mb-4 flex items-center gap-2"><BarChart3 className="w-5 h-5 text-blue-600" /> Pollutant Comparison</h2>
+                <p className="text-slate-500 text-sm mb-6">Current levels vs WHO guidelines for {selectedStation.name} station</p>
                 <div className="space-y-4">
                   {[
                     { label: 'PM2.5', current: currentPm25, limit: 15, unit: 'µg/m³' },
@@ -3731,14 +3733,14 @@ function CamsDashboard() {
                     { label: 'NO2', current: currentNo2, limit: 25, unit: 'µg/m³' }
                   ].map((p) => {
                     const pct = Math.min((p.current / p.limit) * 100, 100);
-                    const barColor = pct > 80 ? '#ef4444' : pct > 50 ? '#facc15' : '#13ec92';
+                    const barColor = pct > 80 ? '#ef4444' : pct > 50 ? '#facc15' : '#2563eb';
                     return (
                       <div key={p.label}>
                         <div className="flex justify-between text-sm mb-1">
-                          <span className="text-white font-bold">{p.label}</span>
-                          <span className="text-slate-400">{p.current.toFixed(1)} / {p.limit} {p.unit}</span>
+                          <span className="text-slate-900 font-bold">{p.label}</span>
+                          <span className="text-slate-500">{p.current.toFixed(1)} / {p.limit} {p.unit}</span>
                         </div>
-                        <div className="h-3 bg-[#051c14] rounded-full overflow-hidden">
+                        <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
                           <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: barColor }} />
                         </div>
                       </div>
@@ -3747,23 +3749,23 @@ function CamsDashboard() {
                 </div>
               </div>
 
-              <div className="bg-[#0a2319] rounded-2xl border border-[#13ec92]/10 p-6">
-                <h2 className="text-white font-bold text-lg mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-[#13ec92]" /> Insights</h2>
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                <h2 className="text-slate-900 font-headline font-bold text-lg mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-blue-600" /> Insights</h2>
                 <div className="space-y-4">
-                  <div className="bg-[#051c14] rounded-xl p-4 border border-[#13ec92]/10">
-                    <div className="text-[#13ec92] text-xs font-bold uppercase mb-2">Air Quality Rating</div>
-                    <div className="text-3xl font-black text-white mb-1">{aqiStatus}</div>
-                    <p className="text-slate-400 text-sm">European AQI index value: {currentAQI}</p>
+                  <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                    <div className="text-blue-600 text-xs font-bold uppercase mb-2">Air Quality Rating</div>
+                    <div className="text-3xl font-black text-slate-900 mb-1">{aqiStatus}</div>
+                    <p className="text-slate-500 text-sm">European AQI index value: {currentAQI}</p>
                   </div>
-                  <div className="bg-[#051c14] rounded-xl p-4 border border-[#13ec92]/10">
-                    <div className="text-[#13ec92] text-xs font-bold uppercase mb-2">Key Pollutant</div>
-                    <div className="text-lg font-bold text-white mb-1">{currentPm25 > currentNo2 ? 'PM2.5' : 'NO2'} is dominant</div>
-                    <p className="text-slate-400 text-sm">Value: {Math.max(currentPm25, currentNo2).toFixed(1)} µg/m³</p>
+                  <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                    <div className="text-blue-600 text-xs font-bold uppercase mb-2">Key Pollutant</div>
+                    <div className="text-lg font-bold text-slate-900 mb-1">{currentPm25 > currentNo2 ? 'PM2.5' : 'NO2'} is dominant</div>
+                    <p className="text-slate-500 text-sm">Value: {Math.max(currentPm25, currentNo2).toFixed(1)} µg/m³</p>
                   </div>
-                  <div className="bg-[#051c14] rounded-xl p-4 border border-[#13ec92]/10">
-                    <div className="text-[#13ec92] text-xs font-bold uppercase mb-2">Hotspot Alert</div>
-                    <div className="text-lg font-bold text-white mb-1">{displayHotspots[0]?.city || 'N/A'}</div>
-                    <p className="text-slate-400 text-sm">Highest AQI: {displayHotspots[0]?.aqi || 0}</p>
+                  <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                    <div className="text-blue-600 text-xs font-bold uppercase mb-2">Hotspot Alert</div>
+                    <div className="text-lg font-bold text-slate-900 mb-1">{displayHotspots[0]?.city || 'N/A'}</div>
+                    <p className="text-slate-500 text-sm">Highest AQI: {displayHotspots[0]?.aqi || 0}</p>
                   </div>
                 </div>
               </div>
